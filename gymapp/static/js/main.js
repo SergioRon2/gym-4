@@ -49,21 +49,16 @@ $(document).ready(function() {
                             'X-CSRFToken': csrftoken
                         },
                         success: function(response) {
-                            console.log('Respuesta del servidor:', response);
+                            console.log('Imagen enviada al backend con éxito');
+                            $('#mensaje').text(response.mensaje);
 
-                            // Verificar si la operación fue exitosa
-                            if (response.success) {
-                                console.log('Imagen enviada al backend con éxito');
-                                $('#mensaje').text(response.mensaje);
+                            // Redirige a la página 'app' automáticamente después de mostrar el mensaje
+                            console.log('si leo el success')
+                            var enlace = document.getElementById("miEnlace");
 
-                                // Verificar si hay una URL de redirección en la respuesta
-                                if (response.redireccionar) {
-                                    // Redirigir al usuario a la URL proporcionada por el servidor
-                                    window.location.href = response.redireccionar;
-                                }
-                            } else {
-                                console.error('Error al enviar la imagen al backend: ', response.mensaje);
-                            }
+                            // Haz clic en el enlace automáticamente
+                            enlace.click();
+
                         },
                         error: function(error) {
                             console.error('Error al enviar la imagen al backend: ', error);
@@ -78,5 +73,28 @@ $(document).ready(function() {
         }
     });
 
-    // Funciones dataURItoBlob y getCookie aquí...
+    function dataURItoBlob(dataURI) {
+        var byteString = atob(dataURI.split(',')[1]);
+        var ab = new ArrayBuffer(byteString.length);
+        var ia = new Uint8Array(ab);
+        for (var i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        return new Blob([ab], { type: 'image/jpeg' }); // Cambiado a 'image/jpeg'
+    }
+
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 });
