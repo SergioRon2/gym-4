@@ -1,0 +1,35 @@
+body {
+    background-color: #007bff;
+}
+
+
+/* Personaliza los estilos del calendario */
+
+.datepicker {
+    /* Cambia el fondo del calendario */
+    background-color: #f8f9fa;
+}
+
+.datepicker table {
+    /* Cambia el fondo de la tabla del calendario */
+    background-color: #fff;
+}
+
+.datepicker th,
+.datepicker td {
+    /* Cambia el color del texto en las celdas del calendario */
+    color: #333;
+}
+
+.datepicker table thead th,
+.datepicker table tfoot th {
+    /* Cambia el fondo de las celdas del encabezado y pie del calendario */
+    background-color: #007bff;
+    color: #fff;
+}
+
+.datepicker table thead th:hover,
+.datepicker table tfoot th:hover {
+    /* Cambia el fondo de las celdas del encabezado y pie del calendario al pasar el mouse */
+    background-color: #0056b3;
+}

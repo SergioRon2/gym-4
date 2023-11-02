@@ -1,0 +1,23 @@
+{% extends 'gymapp/base.html' %}{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Eliminar</title>
+</head>
+
+<body>
+    {% block content %}
+    <h1>eliminar tarea</h1>
+    <form action="" method="POST">
+        {% csrf_token %}
+        <p>Seguro que quieres eliminar este usuario {{usuario}} </p>
+        <a class="btn btn-warning" href="{% url 'plan' %}">Volver</a>
+        <input class="btn btn-danger" type="submit" value="Eliminar"> {% endblock %}
+    </form>
+</body>
+
+</html>

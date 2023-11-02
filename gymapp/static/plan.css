@@ -1,0 +1,20 @@
+/* styles.css */
+
+.card-verde {
+    background-color: #5af57ed7;
+    /* Fondo verde claro */
+}
+
+.card-amarilla {
+    background-color: #e0de60;
+    /* Fondo amarillo claro */
+}
+
+.card-roja {
+    background-color: #e98b92;
+    /* Fondo rojo claro */
+}
+
+.card-negro {
+    background-color: rgba(83, 27, 100, 0.274);
+}

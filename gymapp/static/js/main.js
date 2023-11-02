@@ -48,17 +48,24 @@ $(document).ready(function() {
                         headers: {
                             'X-CSRFToken': csrftoken
                         },
+
                         success: function(response) {
                             console.log('Imagen enviada al backend con éxito');
                             $('#mensaje').text(response.mensaje);
 
-                            // Redirige a la página 'app' automáticamente después de mostrar el mensaje
-                            console.log('si leo el success')
-                            var enlace = document.getElementById("miEnlace");
+                            if (response.success) {
+                                console.log('si leo el success');
+                                var enlace = document.getElementById("miEnlace");
 
-                            // Haz clic en el enlace automáticamente
-                            enlace.click();
+                                // Agrega el ID del código QR a la URL
+                                var nuevaURL = enlace.href + '?codigo=' + response.codigo + '&nombre=' + response.name;
 
+                                // Actualiza el atributo href del enlace
+                                enlace.href = nuevaURL;
+
+                                // Haz clic en el enlace automáticamente
+                                enlace.click();
+                            }
                         },
                         error: function(error) {
                             console.error('Error al enviar la imagen al backend: ', error);
@@ -98,3 +105,7 @@ $(document).ready(function() {
         return cookieValue;
     }
 });
+
+
+// 
+// Obtener todos los botones "Pagar"

@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'corsheaders',
     "crispy_forms",
     "crispy_bootstrap5",
+    'widget_tweaks',
     'gymapp',
 ]
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -57,12 +58,18 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:8000",
-    "http://192.168.101.75:8000",
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://127.0.0.1:8000",
+#     "http://192.168.101.70:8000",
+#     "http://192.168.101.71:8000",
+#     "http://192.168.101.72:8000",
+#     "http://192.168.101.73:8000",
+#     "http://192.168.101.74:8000",
+#     "http://192.168.101.75:8000",
+#     "http://192.168.101.77:8000",
+# ]
 
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = True
 ROOT_URLCONF = 'gym.urls'
 
 TEMPLATES = [
@@ -119,7 +126,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'es-co'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Bogota'
 
 USE_I18N = True
 

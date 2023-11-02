@@ -1,3 +1,6 @@
+import datetime
+from datetime import datetime
+
 from django.db import models
 
 import qrcode
@@ -66,13 +69,19 @@ class Usuario_gym(models.Model):
     
     codigo_qr = models.ImageField(upload_to='gymapp',null=True, blank=True,editable=False)#Campo no visible, pero accesible
     plan = models.ForeignKey(Planes_gym, on_delete=models.CASCADE, null=True, blank=True)
-    fecha_inicio_gym = models.DateField(default=timezone.now)
+    fecha_inicio_gym = models.DateField(default=datetime.now())
     fecha_fin = models.DateField(blank=True, null=True,editable=False)
-
+    
 
     def __str__(self):
         return str(self.nombre + " " + self.apellido)
-
+    
+    def dias_restantes(self):
+        if self.fecha_fin:
+            dias_restantes = (self.fecha_fin - timezone.now().date()).days
+            return dias_restantes if dias_restantes >= 0 else 0
+        return 0
+    
     def save(self, *args, **kwargs):
         # Generar la imagen del código QR
         self.nombre= self.nombre.upper()
@@ -116,7 +125,12 @@ class Usuario_gym(models.Model):
 class Asistencia(models.Model):
     usuario = models.ForeignKey(Usuario_gym, on_delete=models.CASCADE)
     fecha = models.DateField(default=timezone.now)
-    presente = models.BooleanField(default=False)
+    presente = models.BooleanField(default=True)
     def __str__(self):
         return f"Asistencia de {self.usuario} el {self.fecha}"
 
+# class Pago(models.Model):
+    
+#     nombre = models.CharField(max_length=50)
+#     id_usuario = models.IntegerField(default=0)
+#     pago= models.BooleanField(default=False)

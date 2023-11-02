@@ -1,18 +1,27 @@
-import base64
 import os
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.generic.detail import DetailView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.contrib.auth.views import LoginView
 import numpy as np
 from .models import Usuario_gym
 from django.urls import reverse_lazy, reverse
 from .models import Usuario_gym, Asistencia
 from django.utils import timezone
+from datetime import datetime
 from .forms import AsistenciaForm
 from django.http import HttpResponseRedirect, HttpResponseServerError, JsonResponse
 from pyzbar.pyzbar import decode
+import pytz
 from PIL import Image
 import cv2
+from dateutil import parser
+from calendar import monthrange
 import urllib.parse
+from django.db.models import DateField
+from django.db.models.functions import Trunc
+
+
 class Logueo(LoginView):
     template_name= 'gymapp/login.html'
     fields= '__all__'
@@ -22,28 +31,61 @@ class Logueo(LoginView):
         return reverse_lazy('app')
 
 def app(request):
-    asistencia_form= AsistenciaForm()
+    id_usuario = request.GET.get('codigo')
+    # usuario_obj = Usuario_gym.objects.filter(id_usuario=id_usuario).first()
+    bogota_tz = pytz.timezone('America/Bogota')
 
+    # Obtiene la fecha y hora actual en la zona horaria de Bogotá
+    fecha_actual_bogota = datetime.now(bogota_tz).date()
+
+
+    fecha_actual_bogota = datetime.now(bogota_tz).date
+    asistencia_form = AsistenciaForm(initial={'id_usuario': id_usuario, 'fecha': fecha_actual_bogota})
+
+    
 
     # Procesar el formulario de asistencia si se envió
     if request.method == 'POST':
-        asistencia_form= AsistenciaForm(data=request.POST)
-    
+        asistencia_form = AsistenciaForm(data=request.POST)
+
         if asistencia_form.is_valid():
             asistencia_form.save()
-            #aviso 
-            return redirect(reverse('app')+'?ok')
-
+            # aviso
+            return redirect(reverse('app') + '?ok')
         else:
-            #error
-            return redirect(reverse('app')+'?error')
+            # error
+            return redirect(reverse('app') + '?error')
 
-    #
-    return render(request, 'gymapp/index.html',{'form': asistencia_form})
+    return render(request, 'gymapp/index.html', {'form': asistencia_form})
     
-def usuario(request):
+def usuario(request):   
     usuarios = Usuario_gym.objects.all()
     return render(request, 'gymapp/usuarios.html', {"usuarios":usuarios})
+
+class NuevoUsuario(CreateView):
+    model = Usuario_gym
+    fields = '__all__'
+    template_name= 'gymapp/nuevo_usuario.html'
+    success_url = reverse_lazy('app')
+    
+class EditarUsuario(UpdateView):
+    model = Usuario_gym
+    fields = '__all__'
+    template_name= 'gymapp/nuevo_usuario.html'
+    success_url = reverse_lazy('app')    
+
+class DetalleUsuario(DetailView):
+    model = Usuario_gym
+    context_object_name= 'detalle' 
+    template_name= 'gymapp/detalle_usuario.html'
+
+class EliminarUsuario(DeleteView):
+    model= Usuario_gym
+    context_object_name= 'usuario'
+    template_name= 'gymapp/eliminar_usuario.html'
+    success_url= reverse_lazy('plan')
+    
+
 
 def lector(request):
     
@@ -61,6 +103,10 @@ def lector(request):
             # Ruta a la carpeta media
             ruta_carpeta_media = "C:\\Users\\Shino\\Documents\\misentornos\\gym\\gym\\media\\gymapp" 
             
+            usuario = Usuario_gym.objects.filter(id_usuario=codigo_qr).first()
+            nombre_usuario = usuario.nombre  # Obtén el nombre del usuario
+            apellido_usuario = usuario.apellido  # Obtén el apellido del usuario si es necesario
+            full_name = nombre_usuario + ' ' + apellido_usuario
             # Iterar a través de los archivos en la carpeta media
             for nombre_archivo in os.listdir(ruta_carpeta_media):
                 ruta_completa_archivo = os.path.join(ruta_carpeta_media, nombre_archivo)
@@ -73,7 +119,9 @@ def lector(request):
                     response_data = {
                         'success': True,  # Puedes cambiar esto a False si hay algún error
                         'mensaje': 'Imagen procesada correctamente.',  # Tu mensaje de éxito o error
-                        'redireccionar': reverse('app'),  # Nombre de la URL a la que deseas redirigir al usuario
+                        'codigo': codigo_qr,
+                        'name':full_name,
+                        # Nombre de la URL a la que deseas redirigir al usuario
                         }
 
                     # Devuelve los datos como JSON
@@ -90,3 +138,56 @@ def lector(request):
 
     # Si es una solicitud GET, simplemente renderiza la página HTML
     return render(request, 'gymapp/qr.html')
+
+def lista_asistencia(request):
+    fecha_param = request.GET.get('fecha')
+    id_usuario_param = request.GET.get('id_usuario')
+
+    asistencias = Asistencia.objects.all()
+
+    # Filtrar por fecha si se proporciona una fecha válida
+    if fecha_param:
+        try:
+            fecha = parser.parse(fecha_param).date()
+            asistencias = asistencias.filter(fecha=fecha)
+        except ValueError:
+            return render(request, 'error.html', {'mensaje': 'Formato de fecha inválido'})
+
+    # Filtrar por id_usuario si se proporciona un ID válido
+    if id_usuario_param:
+        asistencias = asistencias.filter(usuario__id_usuario=id_usuario_param)
+
+    # Obtener fechas únicas de la base de datos y ordenarlas en orden descendente
+    fechas = (
+        Asistencia.objects.annotate(date=Trunc('fecha', 'day', output_field=DateField()))
+        .values('date')
+        .distinct()
+        .order_by('-date')
+    )
+    
+
+    return render(request, 'gymapp/asistencia.html', {'asistencias': asistencias, 'fechas': fechas, 'fecha_seleccionada': fecha_param, 'id_usuario': id_usuario_param})
+
+# calculando tiempo de plan
+
+def plan(request):
+    usuarios = Usuario_gym.objects.all()
+    tarjetas = []
+
+    for usuario in usuarios:
+        # Calcula la diferencia en días entre la fecha actual y la fecha de finalización del plan
+        dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
+
+        # Verifica si el usuario tiene de 0 a 31 días restantes en su plan
+        if -365 <= dias_restantes <= 365:
+            tarjeta = {
+                'usuario': usuario,
+                'dias_restantes': dias_restantes
+            }
+            tarjetas.append(tarjeta)
+
+    # Ordena las tarjetas de menor a mayor días restantes
+    tarjetas_ordenadas = sorted(tarjetas, key=lambda x: x['dias_restantes'])
+
+    return render(request, 'gymapp/plan.html', {'tarjetas': tarjetas_ordenadas})
+
