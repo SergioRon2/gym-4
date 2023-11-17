@@ -59,10 +59,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-# CORS_ALLOWED_ORIGINS = [
-      "htpp://localhost:5173",
-      "htpp://localhost:3000",
-      "htpp://localhost:3001,
+CORS_ALLOWED_ORIGINS = [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://localhost:3001",
 #     "http://127.0.0.1:8000",
 #     "http://192.168.101.70:8000",
 #     "http://192.168.101.71:8000",
@@ -71,7 +71,7 @@ MIDDLEWARE = [
 #     "http://192.168.101.74:8000",
 #     "http://192.168.101.75:8000",
 #     "http://192.168.101.77:8000",
-# ]
+]
 
 CORS_ALLOW_ALL_ORIGINS = True
 ROOT_URLCONF = 'gym.urls'
