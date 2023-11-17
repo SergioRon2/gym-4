@@ -3,33 +3,37 @@
 {% extends 'gymapp/base.html' %} {% load static %} {% block content %} {% include 'gymapp/navbar.html' %}
 
 <head>
-    <link rel="stylesheet" href="{% static 'plan.css' %}">
+    <link rel="stylesheet" href="{% static 'planes.css' %}">
 </head>
-<h1>Planes</h1>
+<h1>Control de Planes</h1>
 
-{% for tarjeta in tarjetas %}
-<!-- Esta es cada una de las tarjetas de usuarios -->
-<div class="tarjeta-contenedor">
-    <div class="card {% if tarjeta.dias_restantes > 3 %}card-verde{% elif tarjeta.dias_restantes > 0 %}card-amarilla{% elif tarjeta.dias_restantes == 0  %}card-roja{% elif tarjeta.dias_restantes >= -365 %}card-negro{% endif %}" style="width: 18rem;">
-        <!-- Contenido de la tarjeta -->
-        <div class="card-body">
-            <h5 class="card-title">{{ tarjeta.usuario.nombre }}</h5>
-            <h6 class="card-subtitle mb-2 text-body-secondary">Días restantes: {{ tarjeta.dias_restantes }}</h6>
-            <p class="card-text">Detalles del plan o cualquier otra información que desees mostrar.</p>
-            {% if not tarjeta.usuario.pagado %}
-            <form method="post" action="{% url 'plan' %}">
-                {% csrf_token %}
-                <a href="{% url 'detalle' tarjeta.usuario.id %}" class="btn btn-light">Ver</a>
-                <a href="{% url 'editar' tarjeta.usuario.id %}" class="btn btn-success">Renovar</a>
-                <a href="{% url 'eliminar' tarjeta.usuario.id %}" class="btn btn-danger">Eliminar</a>
-            </form>
-            {% else %}
-            <p>Pagado</p>
-            {% endif %}
+<div class="main">
+    {% for tarjeta in tarjetas %}
+    <!-- Esta es cada una de las tarjetas de usuarios -->
+    <div class="tarjeta-contenedor">
+        <div class="card {% if tarjeta.dias_restantes > 3 %}card-verde{% elif tarjeta.dias_restantes > 0 %}card-amarilla{% elif tarjeta.dias_restantes == 0  %}card-roja{% elif tarjeta.dias_restantes >= -365 %}card-negro{% endif %}" style="width: 18rem;">
+            <!-- Contenido de la tarjeta -->
+            <div class="card-body">
+                <h5 class="card-title">{{ tarjeta.usuario.nombre }} {{ tarjeta.usuario.apellido }}</h5>
+                <h6 class="card-subtitle mb-2 text-body-secondary">Días restantes: {{ tarjeta.dias_restantes }}</h6>
+                <p class="card-text">Tipo de plan: {{tarjeta.usuario.plan}} <br> <span> <i class="bi bi-cash-coin"></i> {{tarjeta.usuario.plan.precio}}</span>
+                </p>
+
+                {% if not tarjeta.usuario.pagado %}
+                <form method="post" action="{% url 'plan' %}">
+                    {% csrf_token %}
+                    <a href="{% url 'detalle' tarjeta.usuario.id %}" class="btn btn-light">Ver</a>
+                    <a href="{% url 'editar' tarjeta.usuario.id %}" class="btn btn-success">Renovar</a>
+                    <a href="{% url 'eliminar' tarjeta.usuario.id %}" class="btn btn-danger">Eliminar</a>
+                </form>
+                {% else %}
+                <p>Pagado</p>
+                {% endif %}
+            </div>
         </div>
     </div>
-</div>
 
-{% endfor %}
+    {% endfor %}
+</div>
 <script src="{% static 'js/plan.js' %}"></script>
 {% endblock %}

@@ -10,3 +10,4 @@ class UsuaioAdmin(admin.ModelAdmin):
 admin.site.register(Usuario_gym,UsuaioAdmin)
 admin.site.register(Planes_gym)
 admin.site.register(Asistencia, AsistenciaAdmin)
+

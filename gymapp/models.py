@@ -32,6 +32,7 @@ def generar_codigo_qr(data):
 class Planes_gym(models.Model):
     TIPOS_PLAN = (
         ('A', 'Anual'),
+        ('T', 'Trimestral'),
         ('M', 'Mensual'),
         ('S3','21 Días'),
         ('S2','15 Días'),
@@ -44,7 +45,7 @@ class Planes_gym(models.Model):
     precio = models.IntegerField( default=0)
 
     def __str__(self):
-        return f"{self.get_tipo_plan_display()} - ${self.precio}"
+        return f"{self.get_tipo_plan_display()}"
 
 class Usuario_gym(models.Model):
     
@@ -92,7 +93,10 @@ class Usuario_gym(models.Model):
         if self.plan:
             if self.plan.tipo_plan == 'M':  # Mensual
                 # Calcula la fecha 30 días después de la fecha de inicio
-                fecha_fin = self.fecha_inicio_gym + timedelta(days=30)
+                fecha_fin = self.fecha_inicio_gym + timedelta(days=31)
+            elif self.plan.tipo_plan == 'T':  # Trimestral
+                # Calcula la fecha 7 días después de la fecha de inicio
+                fecha_fin = self.fecha_inicio_gym + timedelta(days=90)
             elif self.plan.tipo_plan == 'S':  # Semanal
                 # Calcula la fecha 7 días después de la fecha de inicio
                 fecha_fin = self.fecha_inicio_gym + timedelta(days=7)
@@ -129,8 +133,3 @@ class Asistencia(models.Model):
     def __str__(self):
         return f"Asistencia de {self.usuario} el {self.fecha}"
 
-# class Pago(models.Model):
-    
-#     nombre = models.CharField(max_length=50)
-#     id_usuario = models.IntegerField(default=0)
-#     pago= models.BooleanField(default=False)
