@@ -78,15 +78,15 @@ def usuario(request):
 
     for usuario in usuarios:
         usuario_dict = {
+            'id' : usuario.id,       #este id es la primary key
             'nombre': usuario.nombre,
             'apellido': usuario.apellido,
             'tipo_id': usuario.tipo_id,
-            'id': usuario.id_usuario
+            'id_usuario': usuario.id_usuario
         }
         usuarios_lista.append(usuario_dict)
 
     return JsonResponse({'usuarios': usuarios_lista})
-
 
 
 class NuevoUsuario(LoginRequiredMixin,CreateView):
@@ -113,11 +113,19 @@ class DetalleUsuario(LoginRequiredMixin,DetailView):
     context_object_name= 'detalle' 
     template_name= 'gymapp/detalle_usuario.html'
 
-class EliminarUsuario(LoginRequiredMixin,DeleteView):
-    model= Usuario_gym
-    context_object_name= 'usuario'
-    template_name= 'gymapp/eliminar_usuario.html'
-    success_url= reverse_lazy('plan')
+class EliminarUsuario(LoginRequiredMixin, DeleteView):
+    model = Usuario_gym
+    success_url = reverse_lazy('plan')
+
+    def delete(self, request, *args, **kwargs):
+        # Obtén la instancia del usuario que se va a eliminar
+        self.object = self.get_object()
+
+        # Elimina el usuario
+        self.object.delete()
+
+        # Devuelve una respuesta JSON indicando que el usuario se eliminó correctamente
+        return JsonResponse({'success': True, 'mensaje': 'Usuario eliminado correctamente.'})
     
     
 
@@ -219,10 +227,11 @@ def plan(request):
         if -365 <= dias_restantes <= 365:
             tarjeta = {
                 'usuario': {
+                    'id' : usuario.id,
                     'nombre': usuario.nombre,
                     'apellido': usuario.apellido,
                     'tipo_id': usuario.tipo_id,
-                    'id': usuario.id_usuario
+                    'id_usuario': usuario.id_usuario
                 },
                 'dias_restantes': dias_restantes
             }
