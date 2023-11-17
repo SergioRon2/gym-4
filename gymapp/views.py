@@ -39,7 +39,7 @@ class Logueo(LoginView):
 
 
 
-@login_required(login_url='login')
+# @login_required(login_url='login')
 def app(request):
     id_usuario = request.GET.get('codigo')
     # usuario_obj = Usuario_gym.objects.filter(id_usuario=id_usuario).first()
@@ -69,10 +69,24 @@ def app(request):
     return render(request, 'gymapp/index.html', {'form': asistencia_form})
 
 
-@login_required(login_url='login')
-def usuario(request):   
+
+# @login_required(login_url='login')
+def usuario(request):
     usuarios = Usuario_gym.objects.all()
-    return render(request, 'gymapp/usuarios.html', {"usuarios":usuarios})
+
+    usuarios_lista = []
+
+    for usuario in usuarios:
+        usuario_dict = {
+            'nombre': usuario.nombre,
+            'apellido': usuario.apellido,
+            'tipo_id': usuario.tipo_id,
+            'id': usuario.id_usuario
+        }
+        usuarios_lista.append(usuario_dict)
+
+    return JsonResponse({'usuarios': usuarios_lista})
+
 
 
 class NuevoUsuario(LoginRequiredMixin,CreateView):
@@ -107,7 +121,7 @@ class EliminarUsuario(LoginRequiredMixin,DeleteView):
     
     
 
-@login_required(login_url='login')
+# @login_required(login_url='login')
 def lector(request):
     
     if request.method == 'POST' and request.FILES['imagen']:
@@ -122,7 +136,8 @@ def lector(request):
             codigo_qr = qr_data[0].data.decode('utf-8')
             print(f'Imagen recibida y procesada correctamente. Código QR: {codigo_qr}')
             # Ruta a la carpeta media
-            ruta_carpeta_media = "C:\\Users\\Shino\\Documents\\misentornos\\gym\\gym\\media\\gymapp" 
+            current_directory = os.path.dirname(os.path.abspath(__file__))
+            ruta_carpeta_media = os.path.join(current_directory, '../media/gymapp') 
             
             usuario = Usuario_gym.objects.filter(id_usuario=codigo_qr).first()
             nombre_usuario = usuario.nombre  # Obtén el nombre del usuario
@@ -160,7 +175,7 @@ def lector(request):
     # Si es una solicitud GET, simplemente renderiza la página HTML
     return render(request, 'gymapp/qr.html')
 
-@login_required(login_url='login')
+# @login_required(login_url='login')
 def lista_asistencia(request):
     fecha_param = request.GET.get('fecha')
     id_usuario_param = request.GET.get('id_usuario')
@@ -173,7 +188,7 @@ def lista_asistencia(request):
             fecha = parser.parse(fecha_param).date()
             asistencias = asistencias.filter(fecha=fecha)
         except ValueError:
-            return render(request, 'error.html', {'mensaje': 'Formato de fecha inválido'})
+            return JsonResponse({'error': 'Formato de fecha inválido'})
 
     # Filtrar por id_usuario si se proporciona un ID válido
     if id_usuario_param:
@@ -186,24 +201,29 @@ def lista_asistencia(request):
         .distinct()
         .order_by('-date')
     )
-    
 
-    return render(request, 'gymapp/asistencia.html', {'asistencias': asistencias, 'fechas': fechas, 'fecha_seleccionada': fecha_param, 'id_usuario': id_usuario_param})
+    # Convertir queryset a lista de diccionarios para JsonResponse
+    asistencias_lista = list(asistencias.values())
+    
+    return JsonResponse({'asistencias': asistencias_lista, 'fechas': list(fechas), 'fecha_seleccionada': fecha_param, 'id_usuario': id_usuario_param})
 
 # calculando tiempo de plan
-@login_required(login_url='login')
+# @login_required(login_url='login')
 def plan(request):
     usuarios = Usuario_gym.objects.all()
     tarjetas = []
 
     for usuario in usuarios:
-        # Calcula la diferencia en días entre la fecha actual y la fecha de finalización del plan
         dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
 
-        # Verifica si el usuario tiene de 0 a 31 días restantes en su plan
         if -365 <= dias_restantes <= 365:
             tarjeta = {
-                'usuario': usuario,
+                'usuario': {
+                    'nombre': usuario.nombre,
+                    'apellido': usuario.apellido,
+                    'tipo_id': usuario.tipo_id,
+                    'id': usuario.id_usuario
+                },
                 'dias_restantes': dias_restantes
             }
             tarjetas.append(tarjeta)
@@ -211,24 +231,27 @@ def plan(request):
     # Ordena las tarjetas de menor a mayor días restantes
     tarjetas_ordenadas = sorted(tarjetas, key=lambda x: x['dias_restantes'])
 
-    return render(request, 'gymapp/plan.html', {'tarjetas': tarjetas_ordenadas})
+    return JsonResponse({'tarjetas': tarjetas_ordenadas})
 
-@login_required(login_url='login')
+
+# @login_required(login_url='login')
 def ganancias_mensuales(request):
     usuarios = Usuario_gym.objects.all()
     tarjetas = []
 
-    # Calcular el valor total de los planes
     total_valor_plan = Usuario_gym.objects.aggregate(Sum('plan__precio'))['plan__precio__sum']
 
     for usuario in usuarios:
-        # Calcula la diferencia en días entre la fecha actual y la fecha de finalización del plan
         dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
 
-        # Verifica si el usuario tiene de 0 a 31 días restantes en su plan
         if -365 <= dias_restantes <= 365:
             tarjeta = {
-                'usuario': usuario,
+                'usuario': {
+                    'nombre': usuario.nombre,
+                    'apellido': usuario.apellido,
+                    'tipo_id': usuario.tipo_id,
+                    'id': usuario.id_usuario
+                },
                 'dias_restantes': dias_restantes
             }
             tarjetas.append(tarjeta)
@@ -236,5 +259,4 @@ def ganancias_mensuales(request):
     # Ordena las tarjetas de menor a mayor días restantes
     tarjetas_ordenadas = sorted(tarjetas, key=lambda x: x['dias_restantes'])
 
-    return render(request, 'gymapp/ganancias_mensuales.html', {'tarjetas': tarjetas_ordenadas, 'total_valor_plan': total_valor_plan})
-
+    return JsonResponse({'tarjetas': tarjetas_ordenadas, 'total_valor_plan': total_valor_plan})
