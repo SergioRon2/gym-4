@@ -27,6 +27,8 @@ from django.db.models.functions import ExtractMonth, ExtractYear
 from django.db.models import Sum
 from django.db.models import Count
 from django.db.models import F
+from django.middleware.csrf import get_token
+import json
 
 
 class Logueo(LoginView):
@@ -69,6 +71,10 @@ def app(request):
     return render(request, 'gymapp/index.html', {'form': asistencia_form})
 
 
+def obtener_csrf_token(request):
+    csrf_token = get_token(request)
+    return JsonResponse({'csrfToken': csrf_token})
+
 
 # @login_required(login_url='login')
 def usuario(request):
@@ -89,45 +95,73 @@ def usuario(request):
     return JsonResponse({'usuarios': usuarios_lista})
 
 
-class NuevoUsuario(LoginRequiredMixin,CreateView):
+class NuevoUsuario(CreateView):
     model = Usuario_gym
     fields = '__all__'
-    template_name= 'gymapp/nuevo_usuario.html'
     success_url = reverse_lazy('plan')
-    
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields['fecha_inicio_gym'].widget = DatePickerInput(format='%Y-%m-%d')
-        return form
 
+    def form_valid(self, form):
+        # Lógica adicional si es necesario
+        return super().form_valid(form)
 
-class EditarUsuario(LoginRequiredMixin,UpdateView):
+    def post(self, request, *args, **kwargs):
+        form = self.get_form()
+        if form.is_valid():
+            # Guardar el nuevo usuario
+            self.object = form.save()
+
+            # Devolver una respuesta JSON indicando éxito y los datos del nuevo usuario
+            response_data = {
+                'success': True,
+                'mensaje': 'Usuario creado correctamente.',
+                'usuario': {
+                    'id': self.object.id,
+                    'nombre': self.object.nombre,
+                    'apellido': self.object.apellido,
+                    'tipo_id': self.object.tipo_id,
+                    'id_usuario': self.object.id_usuario,
+                    # Agrega más campos según sea necesario
+                }
+            }
+            return JsonResponse(response_data)
+        else:
+            # Devolver una respuesta JSON indicando que hubo errores en el formulario
+            errors = dict(form.errors.items())
+            return JsonResponse({'success': False, 'errors': errors})
+        
+class EditarUsuario(UpdateView):
     model = Usuario_gym
     fields = '__all__'
     template_name= 'gymapp/nuevo_usuario.html'
     success_url = reverse_lazy('plan')    
 
 
-class DetalleUsuario(LoginRequiredMixin,DetailView):
+class DetalleUsuario(DetailView):
     model = Usuario_gym
     context_object_name= 'detalle' 
     template_name= 'gymapp/detalle_usuario.html'
 
-class EliminarUsuario(LoginRequiredMixin, DeleteView):
+class EliminarUsuario(DeleteView):
     model = Usuario_gym
     success_url = reverse_lazy('plan')
 
     def delete(self, request, *args, **kwargs):
-        # Obtén la instancia del usuario que se va a eliminar
-        self.object = self.get_object()
+        try:
+            # Obtén la instancia del usuario que se va a eliminar
+            self.object = self.get_object()
 
-        # Elimina el usuario
-        self.object.delete()
+            # Puedes agregar lógica adicional antes de eliminar el objeto si es necesario
+            # Por ejemplo, verificar si el usuario tiene permisos para eliminar el objeto, etc.
 
-        # Devuelve una respuesta JSON indicando que el usuario se eliminó correctamente
-        return JsonResponse({'success': True, 'mensaje': 'Usuario eliminado correctamente.'})
-    
-    
+            # Elimina el usuario
+            self.object.delete()
+
+            # Devuelve una respuesta JSON indicando que el usuario se eliminó correctamente
+            return JsonResponse({'success': True, 'mensaje': 'Usuario eliminado correctamente.'})
+        except Exception as e:
+            # Devuelve una respuesta JSON indicando un error si la eliminación falla
+            return JsonResponse({'success': False, 'error': str(e)})
+
 
 # @login_required(login_url='login')
 def lector(request):
