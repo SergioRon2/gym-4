@@ -1,32 +1,22 @@
 import os
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.contrib.auth.views import LoginView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.forms.models import model_to_dict
 import numpy as np
-from .models import Usuario_gym
 from django.urls import reverse_lazy, reverse
-from .models import Usuario_gym, Asistencia, Planes_gym
-from django.utils import timezone
+from .models import Usuario_gym, Asistencia
 from datetime import datetime
 from .forms import AsistenciaForm
-from django.http import HttpResponseRedirect, HttpResponseServerError, JsonResponse
+from django.http import JsonResponse
 from pyzbar.pyzbar import decode
 import pytz
-from PIL import Image
 import cv2
 from dateutil import parser
-from calendar import monthrange
-import urllib.parse
 from django.db.models import DateField
 from django.db.models.functions import Trunc
-from bootstrap_datepicker_plus.widgets import DatePickerInput
-from django.contrib.auth.decorators import login_required
-from django.db.models.functions import ExtractMonth, ExtractYear
 from django.db.models import Sum
-from django.db.models import Count
-from django.db.models import F
 from django.middleware.csrf import get_token
 import json
 
@@ -95,7 +85,7 @@ def usuario(request):
     return JsonResponse({'usuarios': usuarios_lista})
 
 
-class NuevoUsuario(CreateView):
+class NuevoUsuario(CreateView): 
     model = Usuario_gym
     fields = '__all__'
     success_url = reverse_lazy('plan')
@@ -104,31 +94,31 @@ class NuevoUsuario(CreateView):
         # Lógica adicional si es necesario
         return super().form_valid(form)
 
-    def post(self, request, *args, **kwargs):
-        form = self.get_form()
-        if form.is_valid():
-            # Guardar el nuevo usuario
-            self.object = form.save()
 
-            # Devolver una respuesta JSON indicando éxito y los datos del nuevo usuario
+def nuevo_usuarioR(request):
+    if request.method == 'POST':
+        
+        data = json.loads(request.body.decode('utf-8'))    
+        new_user_gym = Usuario_gym.objects.create(
+            nombre=data.get('nombre'),
+            apellido=data.get('apellido'),
+            tipo_id=data.get('tipo_id'),
+            id_usuario=data.get('id_usuario'),
+            plan=None,
+            fecha_inicio_gym=data.get('fecha_inicio_gym'), 
+            fecha_fin=data.get('fecha_fin'), 
+        )
+        if new_user_gym:
+            new_user_gym_dict = model_to_dict(new_user_gym)
             response_data = {
                 'success': True,
                 'mensaje': 'Usuario creado correctamente.',
-                'usuario': {
-                    'id': self.object.id,
-                    'nombre': self.object.nombre,
-                    'apellido': self.object.apellido,
-                    'tipo_id': self.object.tipo_id,
-                    'id_usuario': self.object.id_usuario,
-                    'plan': self.object.plan,
-                    # Agrega más campos según sea necesario
-                }
+                'usuario': new_user_gym_dict,
             }
+
             return JsonResponse(response_data)
-        else:
-            # Devolver una respuesta JSON indicando que hubo errores en el formulario
-            errors = dict(form.errors.items())
-            return JsonResponse({'success': False, 'errors': errors})
+        return JsonResponse({'success': False, 'mensaje': 'No se pudo guardar'})
+    return JsonResponse({'success': False, 'mensaje': 'Método no permitido'})
         
 class EditarUsuario(UpdateView):
     model = Usuario_gym
