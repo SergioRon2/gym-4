@@ -120,6 +120,7 @@ class NuevoUsuario(CreateView):
                     'apellido': self.object.apellido,
                     'tipo_id': self.object.tipo_id,
                     'id_usuario': self.object.id_usuario,
+                    'plan': self.object.plan,
                     # Agrega más campos según sea necesario
                 }
             }
