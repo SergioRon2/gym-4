@@ -6,7 +6,7 @@ from django.contrib.auth.views import LoginView
 from django.forms.models import model_to_dict
 import numpy as np
 from django.urls import reverse_lazy, reverse
-from .models import Usuario_gym, Asistencia
+from .models import Usuario_gym, Planes_gym, Asistencia
 from datetime import datetime
 from .forms import AsistenciaForm
 from django.http import JsonResponse
@@ -19,6 +19,9 @@ from django.db.models.functions import Trunc
 from django.db.models import Sum
 from django.middleware.csrf import get_token
 import json
+from django.utils import timezone
+from datetime import timedelta
+
 
 
 class Logueo(LoginView):
@@ -85,6 +88,7 @@ def usuario(request):
     return JsonResponse({'usuarios': usuarios_lista})
 
 
+
 class NuevoUsuario(CreateView): 
     model = Usuario_gym
     fields = '__all__'
@@ -92,33 +96,106 @@ class NuevoUsuario(CreateView):
 
     def form_valid(self, form):
         # Lógica adicional si es necesario
-        return super().form_valid(form)
+        # Aquí puedes acceder a los datos del formulario antes de guardarlo
+        # y realizar acciones adicionales si es necesario.
+        tipo_plan = form.cleaned_data.get('plan').tipo_plan
+        try:
+            # Intenta obtener una instancia de Planes_gym según el tipo proporcionado
+            plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan)
+        except Planes_gym.DoesNotExist:
+            # Manejar el caso cuando el tipo de plan no existe en la base de datos
+            return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'})
 
+        # Calcula la fecha_fin según el tipo de plan
+        fecha_fin = timezone.now().date() + timedelta(days=plan_instance.dias)
 
+        # Establece la fecha_fin en el formulario antes de guardarlo
+        form.instance.fecha_fin = fecha_fin
+
+        # Guarda el formulario y obtén la respuesta predeterminada
+        response = super().form_valid(form)
+
+        # Puedes realizar acciones adicionales después de guardar el formulario si es necesario
+
+        return response
+
+# La vista basada en funciones sigue siendo útil si necesitas una API específica
 def nuevo_usuarioR(request):
     if request.method == 'POST':
-        
-        data = json.loads(request.body.decode('utf-8'))    
-        new_user_gym = Usuario_gym.objects.create(
-            nombre=data.get('nombre'),
-            apellido=data.get('apellido'),
-            tipo_id=data.get('tipo_id'),
-            id_usuario=data.get('id_usuario'),
-            plan=None,
-            fecha_inicio_gym=data.get('fecha_inicio_gym'), 
-            fecha_fin=data.get('fecha_fin'), 
-        )
-        if new_user_gym:
-            new_user_gym_dict = model_to_dict(new_user_gym)
-            response_data = {
-                'success': True,
-                'mensaje': 'Usuario creado correctamente.',
-                'usuario': new_user_gym_dict,
-            }
+        data = json.loads(request.body.decode('utf-8'))
+        print("Datos recibidos:", data)
 
-            return JsonResponse(response_data)
-        return JsonResponse({'success': False, 'mensaje': 'No se pudo guardar'})
+        tipo_plan = data.get('plan')
+
+        if tipo_plan:
+            try:
+                # Intenta obtener una instancia de Planes_gym según el tipo proporcionado
+                plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan)
+            except Planes_gym.DoesNotExist:
+                # Manejar el caso cuando el tipo de plan no existe en la base de datos
+                return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'})
+
+            # Obtener la fecha_inicio_gym del JSON
+            fecha_inicio_gym_str = data.get('fecha_inicio_gym')
+
+            # Verificar que la fecha_inicio_gym_str tiene un valor válido
+            if fecha_inicio_gym_str:
+                # Convertir la cadena de fecha a un objeto de fecha
+                fecha_inicio_gym = datetime.strptime(fecha_inicio_gym_str, '%Y-%m-%d').date()
+            else:
+                # Si no hay un valor válido, usa la fecha actual como valor predeterminado
+                fecha_inicio_gym = timezone.now().date()
+
+            # Calcular fecha_fin
+            fecha_fin = fecha_inicio_gym + timedelta(days=plan_instance.dias)
+
+            new_user_gym = Usuario_gym.objects.create(
+                nombre=data.get('nombre'),
+                apellido=data.get('apellido'),
+                tipo_id=data.get('tipo_id'),
+                id_usuario=data.get('id_usuario'),
+                plan=plan_instance,
+                fecha_inicio_gym=fecha_inicio_gym,
+                fecha_fin=fecha_fin,
+            )
+
+            if new_user_gym:
+                new_user_gym_dict = model_to_dict(new_user_gym)
+                response_data = {
+                    'success': True,
+                    'mensaje': 'Usuario creado correctamente.',
+                    'usuario': new_user_gym_dict,
+                }
+
+                return JsonResponse(response_data)
+
+        return JsonResponse({'success': False, 'mensaje': 'No se pudo guardar o tipo de plan no especificado.'})
+
     return JsonResponse({'success': False, 'mensaje': 'Método no permitido'})
+
+def form_valid(self, form):
+        tipo_plan = form.cleaned_data.get('plan').tipo_plan
+
+        if tipo_plan:
+            try:
+                plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan)
+            except Planes_gym.DoesNotExist:
+                return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'})
+
+            # Usar la fecha de inicio del formulario
+            fecha_inicio = form.cleaned_data.get('fecha_inicio_gym')
+
+            # Calcular la fecha de finalización según el tipo de plan y la fecha de inicio
+            fecha_fin = fecha_inicio + timedelta(days=plan_instance.dias)
+
+            # Añadir fecha_fin al formulario
+            form.instance.fecha_fin = fecha_fin
+
+
+        return JsonResponse({'success': False, 'mensaje': 'No se pudo guardar o tipo de plan no especificado.'})
+
+def form_invalid(self, form):
+        return JsonResponse({'success': False, 'mensaje': 'Formulario inválido.'})
         
 class EditarUsuario(UpdateView):
     model = Usuario_gym

@@ -43,6 +43,7 @@ class Planes_gym(models.Model):
     
     tipo_plan = models.CharField(max_length=2, choices=TIPOS_PLAN)
     precio = models.IntegerField( default=0)
+    dias = models.IntegerField(default=0)
 
     def __str__(self):
         return f"{self.get_tipo_plan_display()}"
@@ -70,8 +71,8 @@ class Usuario_gym(models.Model):
     
     codigo_qr = models.ImageField(upload_to='gymapp',null=True, blank=True,editable=False)#Campo no visible, pero accesible
     plan = models.ForeignKey(Planes_gym, on_delete=models.CASCADE, null=True, blank=True)
-    fecha_inicio_gym = models.DateField(default=datetime.now())
-    fecha_fin = models.DateField(blank=True, null=True,editable=False)
+    fecha_inicio_gym = models.DateField(default=datetime.now, null=True)
+    fecha_fin = models.DateField(default=(timezone.now() + timedelta(days=365)).date())
     
 
     def __str__(self):
@@ -85,46 +86,44 @@ class Usuario_gym(models.Model):
     
     def save(self, *args, **kwargs):
         # Generar la imagen del código QR
-        self.nombre= self.nombre.upper()
-        self.apellido= self.apellido.upper()
+        self.nombre = self.nombre.upper()
+        self.apellido = self.apellido.upper()
 
         qr_img_path = generar_codigo_qr(self.id_usuario)
-        #fechas
-        if self.plan:
-            if self.plan.tipo_plan == 'M':  # Mensual
-                # Calcula la fecha 30 días después de la fecha de inicio
-                fecha_fin = self.fecha_inicio_gym + timedelta(days=31)
-            elif self.plan.tipo_plan == 'T':  # Trimestral
-                # Calcula la fecha 7 días después de la fecha de inicio
-                fecha_fin = self.fecha_inicio_gym + timedelta(days=90)
-            elif self.plan.tipo_plan == 'S':  # Semanal
-                # Calcula la fecha 7 días después de la fecha de inicio
-                fecha_fin = self.fecha_inicio_gym + timedelta(days=7)
-            elif self.plan.tipo_plan == 'S3':  # Semanal
-                # Calcula la fecha 21 días después de la fecha de inicio
-                fecha_fin = self.fecha_inicio_gym + timedelta(days=21)    
-            elif self.plan.tipo_plan == 'S2':  # Semanal
-                # Calcula la fecha 7 días después de la fecha de inicio
-                fecha_fin = self.fecha_inicio_gym + timedelta(days=14)
-            elif self.plan.tipo_plan == 'A':  # Anual
-                # Calcula la fecha 365 días después de la fecha de inicio
-                fecha_fin = self.fecha_inicio_gym + timedelta(days=365)
-            elif self.plan.tipo_plan =='D':
-                #calcula la fecha 1 dia despues.
-                fecha_fin = self.fecha_inicio_gym
-            else:
-                # Otros tipos de plan, no realizar ningún cálculo
-                fecha_fin = None
 
-            # Establece la fecha_fin
-            self.fecha_fin = fecha_fin
+        # Verificar si la fecha de inicio está proporcionada antes de calcular la fecha de fin
+        if self.fecha_inicio_gym:
+            if self.plan:
+                # Calcular la fecha de fin basándose en el tipo de plan
+                if self.plan.tipo_plan == 'M':  # Mensual
+                    days_to_add = 31
+                elif self.plan.tipo_plan == 'T':  # Trimestral
+                    days_to_add = 90
+                elif self.plan.tipo_plan == 'S':  # Semanal
+                    days_to_add = 7
+                elif self.plan.tipo_plan == 'S3':  # Semanal
+                    days_to_add = 21
+                elif self.plan.tipo_plan == 'S2':  # Semanal
+                    days_to_add = 14
+                elif self.plan.tipo_plan == 'A':  # Anual
+                    days_to_add = 365
+                elif self.plan.tipo_plan == 'D':
+                    days_to_add = 1
+                else:
+                    # Otros tipos de plan, no realizar ningún cálculo
+                    days_to_add = 0
 
-        # Asignar la imagen del código QR al campo 'codigo_qr'
-        with open(qr_img_path, 'rb') as temp_file:
-            self.codigo_qr.save(f"{self.nombre}.png",File(temp_file), save=False)
+                # Calcular la fecha de fin
+                fecha_fin = self.fecha_inicio_gym + timedelta(days=days_to_add)
 
-        # Guardar el modelo
-        super(Usuario_gym, self).save(*args, **kwargs)
+                # Establecer la fecha_fin solo si se ha calculado
+                self.fecha_fin = fecha_fin
+
+        super().save(*args, **kwargs)
+
+
+
+
 
 class Asistencia(models.Model):
     usuario = models.ForeignKey(Usuario_gym, on_delete=models.CASCADE)
