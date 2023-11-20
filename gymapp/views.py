@@ -200,9 +200,26 @@ def form_invalid(self, form):
 class EditarUsuario(UpdateView):
     model = Usuario_gym
     fields = '__all__'
-    template_name= 'gymapp/nuevo_usuario.html'
-    success_url = reverse_lazy('plan')    
+    success_url = reverse_lazy('plan')
+    
 
+    def form_valid(self, form):
+        response_data = {
+            'success': True,
+            'mensaje': 'Usuario actualizado correctamente.',
+            'usuario': model_to_dict(form.instance),
+        }
+        
+        return JsonResponse(response_data)
+    
+    def form_invalid(self, form):
+        response_data = {
+            'success': False,
+            'mensaje': 'Error al actualizar el usuario.',
+            'errores': form.errors,
+        }
+
+        return JsonResponse(response_data)
 
 class DetalleUsuario(DetailView):
     model = Usuario_gym
