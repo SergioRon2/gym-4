@@ -32,14 +32,14 @@ def generar_codigo_qr(data):
 
 class Planes_gym(models.Model):
     TIPOS_PLAN = (
-        ('Anual', 'Anual'),
-        ('Trimestral', 'Trimestral'),
-        ('Mensual', 'Mensual'),
-        ('Semanal x3','21 Días'),
-        ('Semanal x2','15 Días'),
-        ('Semanal', 'Semanal'),
-        ('Diario','Diario'),
-        ('Personalizado', 'Personalizado'),
+        ('A', 'Anual'),
+        ('T', 'Trimestral'),
+        ('M', 'Mensual'),
+        ('S3','21 Días'),
+        ('S2','15 Días'),
+        ('S', 'Semanal'),
+        ('D','Diario'),
+        ('P', 'Personalizado'),
     )
     
     tipo_plan = models.CharField(max_length=20, choices=TIPOS_PLAN)
@@ -96,19 +96,19 @@ class Usuario_gym(models.Model):
         if self.fecha_inicio_gym:
             if self.plan:
                 # Calcular la fecha de fin basándose en el tipo de plan
-                if self.plan.tipo_plan == 'Mensual':  # Mensual
+                if self.plan.tipo_plan == 'M':  # Mensual
                     days_to_add = 31
-                elif self.plan.tipo_plan == 'Trimestral':  # Trimestral
+                elif self.plan.tipo_plan == 'T':  # Trimestral
                     days_to_add = 90
-                elif self.plan.tipo_plan == 'Semanal':  # Semanal
+                elif self.plan.tipo_plan == 'S':  # Semanal
                     days_to_add = 7
-                elif self.plan.tipo_plan == 'Semanal x3':  # Semanal
+                elif self.plan.tipo_plan == 'S3':  # Semanal
                     days_to_add = 21
-                elif self.plan.tipo_plan == 'Semanal x2':  # Semanal
+                elif self.plan.tipo_plan == 'S2':  # Semanal
                     days_to_add = 14
-                elif self.plan.tipo_plan == 'Anual':  # Anual
+                elif self.plan.tipo_plan == 'A':  # Anual
                     days_to_add = 365
-                elif self.plan.tipo_plan == 'Diario':
+                elif self.plan.tipo_plan == 'D':
                     days_to_add = 1
                 else:
                     # Otros tipos de plan, no realizar ningún cálculo
