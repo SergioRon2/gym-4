@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'bootstrap_datepicker_plus',
     'gymapp',
+    'rest_framework',
 ]
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 

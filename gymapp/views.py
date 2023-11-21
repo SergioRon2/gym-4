@@ -21,6 +21,7 @@ from django.middleware.csrf import get_token
 import json
 from django.utils import timezone
 from datetime import timedelta
+from rest_framework import serializers
 
 
 
@@ -220,11 +221,40 @@ class EditarUsuario(UpdateView):
         }
 
         return JsonResponse(response_data)
+    
+class UsuarioGymSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Planes_gym
+        fields = '__all__'
 
 class DetalleUsuario(DetailView):
     model = Usuario_gym
-    context_object_name= 'detalle' 
-    template_name= 'gymapp/detalle_usuario.html'
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+
+        # Obtener el plan asociado al usuario
+        plan = self.object.plan
+
+        # Usar usuario.plan.dias directamente en la función
+        dias_restantes = (self.object.fecha_fin - datetime.now().date()).days
+
+        # Construir el JSON de respuesta
+        data = {
+            'id': self.object.id,
+            'nombre': self.object.nombre,
+            'apellido': self.object.apellido,
+            'tipo_id': self.object.tipo_id,
+            'id_usuario': self.object.id_usuario,
+            'fecha_inicio_gym': self.object.fecha_inicio_gym,
+            'tipo_plan': plan.tipo_plan,
+            'precio': plan.precio,
+            'dias_restantes': dias_restantes,
+            # Agrega más campos según sea necesario
+        }
+
+        return JsonResponse(data)
+
 
 class EliminarUsuario(DeleteView):
     model = Usuario_gym
@@ -341,10 +371,15 @@ def plan(request):
     tarjetas = []
 
     for usuario in usuarios:
+        # Obtener el plan asociado al usuario
+        plan = usuario.plan
+
+        # Usar usuario.plan.dias directamente en la función
         dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
 
         if -365 <= dias_restantes <= 365:
             tarjeta = {
+                'tipo plan': plan.tipo_plan,
                 'usuario': {
                     'id' : usuario.id,
                     'nombre': usuario.nombre,
@@ -360,6 +395,8 @@ def plan(request):
     tarjetas_ordenadas = sorted(tarjetas, key=lambda x: x['dias_restantes'])
 
     return JsonResponse({'tarjetas': tarjetas_ordenadas})
+
+
 
 
 # @login_required(login_url='login')
