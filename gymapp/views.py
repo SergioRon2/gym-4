@@ -22,6 +22,7 @@ import json
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework import serializers
+from django.shortcuts import get_object_or_404
 
 
 
@@ -71,22 +72,32 @@ def obtener_csrf_token(request):
 
 
 # @login_required(login_url='login')
-def usuario(request):
-    usuarios = Usuario_gym.objects.all()
-
-    usuarios_lista = []
-
-    for usuario in usuarios:
+def usuario(request, id=None):
+    if id:
+        # Si se proporciona un ID, obtenemos ese usuario específico
+        usuario = get_object_or_404(Usuario_gym, id=id)
         usuario_dict = {
-            'id' : usuario.id,       #este id es la primary key
+            'id': usuario.id,
             'nombre': usuario.nombre,
             'apellido': usuario.apellido,
             'tipo_id': usuario.tipo_id,
             'id_usuario': usuario.id_usuario
         }
-        usuarios_lista.append(usuario_dict)
-
-    return JsonResponse({'usuarios': usuarios_lista})
+        return JsonResponse({'usuario': usuario_dict})
+    else:
+        # Si no se proporciona un ID, devolvemos la lista de todos los usuarios
+        usuarios = Usuario_gym.objects.all()
+        usuarios_lista = [
+            {
+                'id': usuario.id,
+                'nombre': usuario.nombre,
+                'apellido': usuario.apellido,
+                'tipo_id': usuario.tipo_id,
+                'id_usuario': usuario.id_usuario
+            }
+            for usuario in usuarios
+        ]
+        return JsonResponse({'usuarios': usuarios_lista})
 
 
 
@@ -202,7 +213,6 @@ class EditarUsuario(UpdateView):
     model = Usuario_gym
     fields = '__all__'
     success_url = reverse_lazy('plan')
-    
 
     def form_valid(self, form):
         response_data = {
@@ -210,23 +220,16 @@ class EditarUsuario(UpdateView):
             'mensaje': 'Usuario actualizado correctamente.',
             'usuario': form.instance,
         }
-        
         return JsonResponse(response_data)
-    
+
     def form_invalid(self, form):
         response_data = {
             'success': False,
             'mensaje': 'Error al actualizar el usuario.',
             'errores': form.errors,
         }
-
         return JsonResponse(response_data)
     
-class UsuarioGymSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Planes_gym
-        fields = '__all__'
-
 class DetalleUsuario(DetailView):
     model = Usuario_gym
 
@@ -379,7 +382,7 @@ def plan(request):
 
         if -365 <= dias_restantes <= 365:
             tarjeta = {
-                'tipo plan': plan.tipo_plan,
+                'tipo_plan': plan.tipo_plan,
                 'usuario': {
                     'id' : usuario.id,
                     'nombre': usuario.nombre,
