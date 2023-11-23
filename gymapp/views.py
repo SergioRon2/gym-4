@@ -218,8 +218,9 @@ class EditarUsuario(UpdateView):
         response_data = {
             'success': True,
             'mensaje': 'Usuario actualizado correctamente.',
-            'usuario': form.instance,
+            'usuario': model_to_dict(form.instance),
         }
+        print("Datos del usuario actualizado:", response_data['usuario'])
         return JsonResponse(response_data)
 
     def form_invalid(self, form):
