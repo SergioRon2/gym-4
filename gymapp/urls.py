@@ -15,6 +15,7 @@ urlpatterns = [
     path('lector/',views.lector, name='lector'),
     path('asistencias/', views.lista_asistencia, name='lista_asistencias'),
     path('plan/', views.plan, name='plan'),
+    path('plan/<int:usuario_id>/', views.plan, name='plan_usuario'),
     path('nuevo_usuario/', views.nuevo_usuarioR, name='nuevo_usuario'),
     path('detalle/<int:pk>', views.DetalleUsuario.as_view(), name='detalle'),
     path('editar/<int:pk>', views.EditarUsuario.as_view(), name='editar'),

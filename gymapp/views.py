@@ -215,13 +215,38 @@ class EditarUsuario(UpdateView):
     success_url = reverse_lazy('plan')
 
     def form_valid(self, form):
-        response_data = {
-            'success': True,
-            'mensaje': 'Usuario actualizado correctamente.',
-            'usuario': model_to_dict(form.instance),
-        }
-        print("Datos del usuario actualizado:", response_data['usuario'])
-        return JsonResponse(response_data)
+        tipo_plan = form.cleaned_data.get('plan').tipo_plan
+
+        if tipo_plan:
+            try:
+                plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan)
+            except Planes_gym.DoesNotExist:
+                return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'})
+
+            fecha_inicio = form.cleaned_data.get('fecha_inicio_gym')
+
+            fecha_fin = fecha_inicio + timedelta(days=plan_instance.dias)
+
+            # Actualizar la instancia del formulario con la fecha_fin calculada
+            form.instance.fecha_fin = fecha_fin
+
+            # Desactivar la validación para el campo fecha_fin
+            form.fields['fecha_fin'].required = False
+
+            # Guardar el formulario y obtener la instancia actualizada
+            form.instance.save()
+
+            response_data = {
+                'success': True,
+                'mensaje': 'Usuario actualizado correctamente.',
+                'usuario': model_to_dict(form.instance),
+            }
+
+            print("Datos del usuario actualizado:", response_data['usuario'])
+            return JsonResponse(response_data)
+
+        return JsonResponse({'success': False, 'mensaje': 'No se pudo guardar o tipo de plan no especificado.'})
+
 
     def form_invalid(self, form):
         response_data = {
@@ -370,20 +395,17 @@ def lista_asistencia(request):
 
 # calculando tiempo de plan
 # @login_required(login_url='login')
-def plan(request):
-    usuarios = Usuario_gym.objects.all()
-    tarjetas = []
+from django.http import JsonResponse
 
-    for usuario in usuarios:
-        # Obtener el plan asociado al usuario
-        plan = usuario.plan
+def plan(request, usuario_id=None):
+    print(f"Recibida solicitud para usuario_id: {usuario_id}")
+    try:
+        if usuario_id:
+            usuario = get_object_or_404(Usuario_gym, pk=usuario_id)
+            dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
 
-        # Usar usuario.plan.dias directamente en la función
-        dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
-
-        if -365 <= dias_restantes <= 365:
             tarjeta = {
-                'tipo_plan': plan.tipo_plan,
+                'tipo_plan': usuario.plan.tipo_plan,
                 'usuario': {
                     'id' : usuario.id,
                     'nombre': usuario.nombre,
@@ -393,12 +415,38 @@ def plan(request):
                 },
                 'dias_restantes': dias_restantes
             }
-            tarjetas.append(tarjeta)
 
-    # Ordena las tarjetas de menor a mayor días restantes
-    tarjetas_ordenadas = sorted(tarjetas, key=lambda x: x['dias_restantes'])
+            return JsonResponse({'tarjeta': tarjeta})
+        else:
+            usuarios = Usuario_gym.objects.all()
+            tarjetas = []
 
-    return JsonResponse({'tarjetas': tarjetas_ordenadas})
+            for usuario in usuarios:
+                plan = usuario.plan
+                dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
+
+                if -365 <= dias_restantes <= 365:
+                    tarjeta = {
+                        'tipo_plan': plan.tipo_plan,
+                        'usuario': {
+                            'id' : usuario.id,
+                            'nombre': usuario.nombre,
+                            'apellido': usuario.apellido,
+                            'tipo_id': usuario.tipo_id,
+                            'id_usuario': usuario.id_usuario
+                        },
+                        'dias_restantes': dias_restantes
+                    }
+                    tarjetas.append(tarjeta)
+
+            tarjetas_ordenadas = sorted(tarjetas, key=lambda x: x['dias_restantes'])
+
+            return JsonResponse({'tarjetas': tarjetas_ordenadas})
+
+    except Exception as e:
+        # Maneja cualquier excepción y devuelve un mensaje de error
+        return JsonResponse({'error': f'Error en la solicitud: {str(e)}'})
+
 
 
 
