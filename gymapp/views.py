@@ -237,10 +237,18 @@ class EditarUsuario(UpdateView):
             form.instance.save()
 
             response_data = {
-                'success': True,
-                'mensaje': 'Usuario actualizado correctamente.',
-                'usuario': model_to_dict(form.instance),
+            'success': True,
+            'mensaje': 'Usuario actualizado correctamente.',
+            'usuario': {
+                'nombre': form.instance.nombre,
+                'apellido': form.instance.apellido,
+                'tipo_id': form.instance.tipo_id,
+                'id_usuario': form.instance.id_usuario,
+                'fecha_inicio_gym': fecha_inicio,
+                'fecha_fin': fecha_fin,
             }
+}
+
 
             print("Datos del usuario actualizado:", response_data['usuario'])
             return JsonResponse(response_data)
@@ -273,10 +281,10 @@ class DetalleUsuario(DetailView):
             'id': self.object.id,
             'nombre': self.object.nombre,
             'apellido': self.object.apellido,
-            'tipo_id': self.object.tipo_id,
+            'tipo_id': self.object.get_tipo_id_display(),
             'id_usuario': self.object.id_usuario,
             'fecha_inicio_gym': self.object.fecha_inicio_gym,
-            'tipo_plan': plan.tipo_plan,
+            'tipo_plan': self.object.plan.get_tipo_plan_display(),
             'precio': plan.precio,
             'dias_restantes': dias_restantes,
             # Agrega más campos según sea necesario
@@ -395,25 +403,22 @@ def lista_asistencia(request):
 
 # calculando tiempo de plan
 # @login_required(login_url='login')
-from django.http import JsonResponse
-
 def plan(request, usuario_id=None):
-    print(f"Recibida solicitud para usuario_id: {usuario_id}")
     try:
         if usuario_id:
+            print(f"Recibida solicitud para usuario_id: {usuario_id}")
             usuario = get_object_or_404(Usuario_gym, pk=usuario_id)
             dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
 
             tarjeta = {
-                'tipo_plan': usuario.plan.tipo_plan,
-                'usuario': {
-                    'id' : usuario.id,
-                    'nombre': usuario.nombre,
-                    'apellido': usuario.apellido,
-                    'tipo_id': usuario.tipo_id,
-                    'id_usuario': usuario.id_usuario
-                },
-                'dias_restantes': dias_restantes
+                'tipo_plan': usuario.plan.get_tipo_plan_display(),
+                'id': usuario.id,
+                'nombre': usuario.nombre,
+                'apellido': usuario.apellido,
+                'tipo_id': usuario.get_tipo_id_display(),
+                'id_usuario': usuario.id_usuario,
+                'dias_restantes': dias_restantes,
+                'fecha_inicio': usuario.fecha_inicio_gym,
             }
 
             return JsonResponse({'tarjeta': tarjeta})
@@ -422,20 +427,18 @@ def plan(request, usuario_id=None):
             tarjetas = []
 
             for usuario in usuarios:
-                plan = usuario.plan
                 dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
 
                 if -365 <= dias_restantes <= 365:
                     tarjeta = {
-                        'tipo_plan': plan.tipo_plan,
-                        'usuario': {
-                            'id' : usuario.id,
-                            'nombre': usuario.nombre,
-                            'apellido': usuario.apellido,
-                            'tipo_id': usuario.tipo_id,
-                            'id_usuario': usuario.id_usuario
-                        },
-                        'dias_restantes': dias_restantes
+                        'tipo_plan': usuario.plan.get_tipo_plan_display(),
+                        'id': usuario.id,
+                        'nombre': usuario.nombre,
+                        'apellido': usuario.apellido,
+                        'tipo_id': usuario.get_tipo_id_display(),
+                        'id_usuario': usuario.id_usuario,
+                        'dias_restantes': dias_restantes,
+                        'fecha_inicio': usuario.fecha_inicio_gym,
                     }
                     tarjetas.append(tarjeta)
 
@@ -445,7 +448,8 @@ def plan(request, usuario_id=None):
 
     except Exception as e:
         # Maneja cualquier excepción y devuelve un mensaje de error
-        return JsonResponse({'error': f'Error en la solicitud: {str(e)}'})
+        return JsonResponse({'error': f'Error en la solicitud: El usuario no existe'})
+
 
 
 

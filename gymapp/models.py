@@ -1,8 +1,6 @@
 import datetime
 from datetime import datetime
-
 from django.db import models
-
 import qrcode
 from django.core.files import File
 from datetime import timedelta
@@ -51,23 +49,17 @@ class Planes_gym(models.Model):
 
 class Usuario_gym(models.Model):
     
-    cedula= 'cedula de ciudadania'
-    ti= 'tarjeta de identidad'
-    ce= 'cedula de extranjeria'
-    pasaporte= 'pasaporte'
-    pep= 'permiso especial permanencia'
-    
     tipos_id_choice=[
-        (cedula,'Cédula de Ciudadanía'),
-        (ti, 'Tarjeta de Identidad'),
-        (ce, 'Cédula de Extranjería'),
-        (pasaporte,'Pasaporte'),
-        (pep,'Permiso Especial de Permanencia'),
+        ('cedula','Cédula de Ciudadanía'),
+        ('ti', 'Tarjeta de Identidad'),
+        ('ce', 'Cédula de Extranjería'),
+        ('pasaporte','Pasaporte'),
+        ('pep','Permiso Especial de Permanencia'),
     ]
     
     nombre= models.CharField(max_length=50)
     apellido= models.CharField(max_length=50)
-    tipo_id = models.CharField(max_length=50, choices=tipos_id_choice, default=cedula)
+    tipo_id = models.CharField(max_length=50, choices=tipos_id_choice)
     id_usuario= models.IntegerField(default=0)
     
     codigo_qr = models.ImageField(upload_to='gymapp',null=True, blank=True,editable=False)#Campo no visible, pero accesible

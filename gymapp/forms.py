@@ -1,8 +1,5 @@
-
 from django import forms
 from .models import Asistencia, Usuario_gym
-
-
 
 from django import forms
 from .models import Asistencia, Usuario_gym
