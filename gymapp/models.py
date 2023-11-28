@@ -116,8 +116,6 @@ class Usuario_gym(models.Model):
 
 
 
-
-
 class Asistencia(models.Model):
     usuario = models.ForeignKey(Usuario_gym, on_delete=models.CASCADE)
     fecha = models.DateField(default=timezone.now)
@@ -125,3 +123,59 @@ class Asistencia(models.Model):
     def __str__(self):
         return f"Asistencia de {self.usuario} el {self.fecha}"
 
+
+
+class Articulo(models.Model):
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField(blank=True)
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    cantidad_disponible = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.nombre
+
+
+class RegistroGanancia(models.Model):
+    fecha = models.DateField(default=timezone.now)
+    ganancia_diaria = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    gasto_diario = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    ganancia_mensual = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    gasto_mensual = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    articulos_vendidos = models.ManyToManyField(Articulo, through='DetalleVenta')
+
+    def __str__(self):
+        return f"Registro de Ganancia - {self.fecha}"
+
+    def calcular_ganancia_mensual(self):
+        # Calcular la ganancia mensual sumando todas las ganancias diarias del mes actual
+        mes_actual = self.fecha.month
+        año_actual = self.fecha.year
+
+        ganancias_diarias_del_mes = RegistroGanancia.objects.filter(
+            fecha__month=mes_actual,
+            fecha__year=año_actual
+        )
+
+        total_ganancia_mensual = sum(registro.ganancia_diaria for registro in ganancias_diarias_del_mes)
+        self.ganancia_mensual = total_ganancia_mensual
+        self.save()
+
+    def calcular_gasto_diario(self):
+        # Calcular el gasto diario sumando todos los gastos diarios del mes actual
+        mes_actual = self.fecha.month
+        año_actual = self.fecha.year
+
+        gastos_diarios_del_mes = RegistroGanancia.objects.filter(
+            fecha__month=mes_actual,
+            fecha__year=año_actual
+        )
+
+        total_gasto_diario = sum(registro.gasto_diario for registro in gastos_diarios_del_mes)
+        self.gasto_diario = total_gasto_diario
+        self.save()
+
+
+class DetalleVenta(models.Model):
+    registro_ganancia = models.ForeignKey(RegistroGanancia, on_delete=models.CASCADE)
+    articulo = models.ForeignKey(Articulo, on_delete=models.CASCADE)
+    cantidad_vendida = models.IntegerField(default=0)

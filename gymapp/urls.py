@@ -20,7 +20,11 @@ urlpatterns = [
     path('detalle/<int:pk>', views.DetalleUsuario.as_view(), name='detalle'),
     path('editar/<int:pk>', views.EditarUsuario.as_view(), name='editar'),
     path('eliminar/<int:pk>', views.EliminarUsuario.as_view(), name='eliminar'),
-    path('ganancia/', views.ganancias_mensuales, name='ganancia'),
+    path('articulos/', views.obtener_articulos, name='articulos'),
+    path('crear_articulo/', views.crear_articulo, name='crear_articulo'),
+    path('eliminar_articulo/<int:pk>', views.EliminarArticulo.as_view(), name='eliminar_articulo'),    
+    path('detalle_articulo/<int:pk>', views.DetalleArticulo.as_view(), name='detalle_articulo'),
+    path('ganancia/', views.registros_ganancia, name='registros_ganancia'),
     path('obtener-csrf-token/', obtener_csrf_token, name='obtener_csrf_token'),
 
 ]

@@ -6,9 +6,9 @@ from django.contrib.auth.views import LoginView
 from django.forms.models import model_to_dict
 import numpy as np
 from django.urls import reverse_lazy, reverse
-from .models import Usuario_gym, Planes_gym, Asistencia
+from .models import Usuario_gym, Planes_gym, Asistencia, Articulo, RegistroGanancia
 from datetime import datetime
-from .forms import AsistenciaForm
+from .forms import AsistenciaForm, ArticuloForm
 from django.http import JsonResponse
 from pyzbar.pyzbar import decode
 import pytz
@@ -452,32 +452,143 @@ def plan(request, usuario_id=None):
 
 
 
+def obtener_articulos(request):
+    articulos = Articulo.objects.all()
+    if request.method == 'GET':
+        data = [{
+            'id' : articulo.id,
+            'nombre': articulo.nombre,
+            'descripcion': articulo.descripcion, 
+            'precio': float(articulo.precio), 
+            'cantidad_disponible': articulo.cantidad_disponible,
+            } for articulo in articulos]
+        return JsonResponse({'articulos': data})
+    else:
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
-
-# @login_required(login_url='login')
-def ganancias_mensuales(request):
-    usuarios = Usuario_gym.objects.all()
-    tarjetas = []
-
-    total_valor_plan = Usuario_gym.objects.aggregate(Sum('plan__precio'))['plan__precio__sum']
-
-    for usuario in usuarios:
-        dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
-
-        if -365 <= dias_restantes <= 365:
-            tarjeta = {
-                'usuario': {
-                    'nombre': usuario.nombre,
-                    'apellido': usuario.apellido,
-                    'tipo_id': usuario.tipo_id,
-                    'id': usuario.id_usuario
-                },
-                'dias_restantes': dias_restantes
+def crear_articulo(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except json.JSONDecodeError:
+            data = {
+                'success': False,
+                'message': 'Error al decodificar los datos JSON.'
             }
-            tarjetas.append(tarjeta)
+            return JsonResponse(data, status=400)
 
-    # Ordena las tarjetas de menor a mayor días restantes
-    tarjetas_ordenadas = sorted(tarjetas, key=lambda x: x['dias_restantes'])
+        form = ArticuloForm(data)
+        if form.is_valid():
+            nuevo_articulo = form.save()
+            response_data = {
+                'success': True,
+                'message': 'Artículo creado con éxito',
+                'articulo_id': nuevo_articulo.id
+            }
+        else:
+            response_data = {
+                'success': False,
+                'errors': form.errors
+            }
 
-    return JsonResponse({'tarjetas': tarjetas_ordenadas, 'total_valor_plan': total_valor_plan})
+        return JsonResponse(response_data)
+
+    else:
+        data = {
+            'success': False,
+            'message': 'Método no permitido'
+        }
+        return JsonResponse(data, status=405)
+
+class EliminarArticulo(DeleteView):
+    model = Articulo
+    success_url = reverse_lazy('plan')
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            # Obtén la instancia del usuario que se va a eliminar
+            self.object = self.get_object()
+
+            # Puedes agregar lógica adicional antes de eliminar el objeto si es necesario
+            # Por ejemplo, verificar si el usuario tiene permisos para eliminar el objeto, etc.
+
+            # Elimina el usuario
+            self.object.delete()
+
+            # Devuelve una respuesta JSON indicando que el usuario se eliminó correctamente
+            return JsonResponse({'success': True, 'mensaje': 'Articulo eliminado correctamente.'})
+        except Exception as e:
+            # Devuelve una respuesta JSON indicando un error si la eliminación falla
+            return JsonResponse({'success': False, 'error': str(e)})
+
+class DetalleArticulo(DetailView):
+    model = Articulo
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+
+        # Construir el JSON de respuesta
+        data = {
+            'id': self.object.id,
+            'nombre': self.object.nombre,
+            'descripcion': self.object.descripcion,
+            'precio': self.object.precio,
+            'cantidad_disponible': self.object.cantidad_disponible,
+            # Agrega más campos según sea necesario
+        }
+
+        return JsonResponse(data)
+
+
+def registros_ganancia(request):
+    if request.method == 'GET':
+        registros_ganancia = RegistroGanancia.objects.all()
+        data = [{'fecha': registro.fecha.strftime('%Y-%m-%d'),
+                 'ganancia_diaria': float(registro.ganancia_diaria),
+                 'gasto_diario': float(registro.gasto_diario),
+                 'ganancia_mensual': float(registro.ganancia_mensual),
+                 'gasto_mensual': float(registro.gasto_mensual),
+                 'articulos_vendidos': [{'articulo': detalle.articulo.nombre,
+                                         'cantidad_vendida': detalle.cantidad_vendida,
+                                         'precio_unitario': float(detalle.articulo.precio),
+                                         'ganancia_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio),
+                                         'gasto_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio)}
+                                        for detalle in registro.detalleventa_set.all()]
+                 } for registro in registros_ganancia]
+        return JsonResponse({'registros_ganancia': data})
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+        except json.JSONDecodeError:
+            data = {'success': False, 'message': 'Error al decodificar los datos JSON.'}
+            return JsonResponse(data, status=400)
+
+        fecha_actual = data.get('fecha')
+        registro, created = RegistroGanancia.objects.get_or_create(fecha=fecha_actual)
+
+        # Actualizar los valores de ganancia y gasto diario
+        registro.ganancia_diaria += data.get('ganancia_diaria', 0)
+        registro.gasto_diario += data.get('gasto_diario', 0)
+        registro.save()
+
+        # Actualizar los detalles de venta
+        detalles_venta = data.get('detalles_venta', [])
+        for detalle in detalles_venta:
+            articulo_id = detalle.get('articulo_id')
+            cantidad_vendida = detalle.get('cantidad_vendida', 0)
+
+            articulo = Articulo.objects.get(pk=articulo_id)
+
+            DetalleVenta.objects.create(registro_ganancia=registro, articulo=articulo, cantidad_vendida=cantidad_vendida)
+
+        # Calcular ganancia y gasto mensual
+        registro.calcular_ganancia_mensual()
+        registro.calcular_gasto_diario()
+
+        data = {'success': True, 'message': 'Registro de ganancia y gasto creado o actualizado correctamente.'}
+        return JsonResponse(data)
+
+    else:
+        data = {'success': False, 'message': 'Método no permitido'}
+        return JsonResponse(data, status=405)

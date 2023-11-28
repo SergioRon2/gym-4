@@ -1,8 +1,5 @@
 from django import forms
-from .models import Asistencia, Usuario_gym
-
-from django import forms
-from .models import Asistencia, Usuario_gym
+from .models import Asistencia, Usuario_gym, Articulo
 
 class AsistenciaForm(forms.ModelForm):
     id_usuario = forms.CharField(label='Número de ID', required=True)
@@ -22,3 +19,9 @@ class AsistenciaForm(forms.ModelForm):
         self.instance.usuario = usuario_obj
 
         return id_usuario
+
+
+class ArticuloForm(forms.ModelForm):
+    class Meta:
+        model = Articulo
+        fields = ['nombre', 'descripcion', 'precio', 'cantidad_disponible']
