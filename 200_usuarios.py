@@ -1,35 +1,52 @@
-from datetime import datetime, timedelta
-from faker import Faker
-from gymapp.models import Usuario_gym, Planes_gym
-import random
+# import sqlite3
+# from faker import Faker
 
-# Configuración de la base de datos
-fake = Faker()
+# # Conéctate a tu base de datos SQLite3 (o crea una nueva)
+# conn = sqlite3.connect('db.sqlite3')
+# cursor = conn.cursor()
 
-# Crear 200 usuarios
-for _ in range(200):
-    nombre = fake.first_name()
-    apellido = fake.last_name()
-    tipo_id = random.choice([choice[0] for choice in Usuario_gym.tipos_id_choice])
-    id_usuario = fake.random_int(min=1000, max=9999)
+# # Crea la tabla de usuarios si aún no existe
+# cursor.execute('''
+#     CREATE TABLE IF NOT EXISTS usuarios (
+#         id INTEGER PRIMARY KEY,
+#         nombre TEXT,
+#         apellido TEXT,
+#         tipoID TEXT,
+#         IDusuario TEXT,
+#         plan_id TEXT,
+#         fecha_inicio_gym TEXT,
+#         fecha_fin TEXT
+#     )
+# ''')
+# sql = "INSERT INTO usuarios (nombre, apellido, tipoID, IDusuario, plan_id, fecha_inicio_gym, fecha_fin) VALUES (?, ?, ?, ?, ?, ?,?)"
+# valores = ('Johan', 'Melo', '32', '42', '23', '30', '19')
 
-    # Seleccionar un plan aleatorio
-    plan = Planes_gym.objects.order_by('?').first()
+# # Usa Faker para generar datos ficticios
+# # fake = Faker()
 
-    # Calcular la fecha de inicio (puedes ajustar esto según tus necesidades)
-    fecha_inicio = datetime.now() - timedelta(days=random.randint(1, 365))
+# # Número de usuarios que deseas generar
+# num_usuarios = 200
 
-    # Crear el usuario
-    usuario = Usuario_gym(
-        nombre=nombre,
-        apellido=apellido,
-        tipo_id=tipo_id,
-        id_usuario=id_usuario,
-        plan=plan,
-        fecha_inicio_gym=fecha_inicio
-    )
+# # Inserta datos en la tabla de usuarios
+# # for i in range(1, num_usuarios + 1):
+# #     nombre = fake.first_name()
+# #     apellido = fake.last_name()
+# #     tipo_id = fake.random_element(elements=('cedula', 'ti', 'ce', 'pasaporte', 'pep'))  # Reemplaza con tus opciones reales
+# #     print(tipo_id)
+# #     id_usuario = fake.random_int(min=1, max=1000)
+# #     print(id_usuario)
+# #     plan_id = fake.random_int(min=1, max=7)  # Reemplaza con el rango real de IDs de planes
+# #     fecha_inicio_gym = fake.date_between(start_date='-1y', end_date='today')
+# #     fecha_fin = fake.date_between(start_date='today', end_date='+1y')
 
-    # Guardar el usuario en la base de datos
-    usuario.save()
+# #     # Sentencia SQL para la inserción
 
-print("Se han creado 200 usuarios en la base de datos.")
+
+# cursor.execute(sql, valores)
+
+# #Guarda los cambios y cierra la conexión
+# conn.commit()
+# conn.close()
+
+
+# print(f'Se han creado {num_usuarios} usuarios')

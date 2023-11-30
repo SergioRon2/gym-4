@@ -61,7 +61,6 @@ class Usuario_gym(models.Model):
     apellido= models.CharField(max_length=50)
     tipo_id = models.CharField(max_length=50, choices=tipos_id_choice)
     id_usuario= models.IntegerField(default=0)
-    
     codigo_qr = models.ImageField(upload_to='gymapp',null=True, blank=True,editable=False)#Campo no visible, pero accesible
     plan = models.ForeignKey(Planes_gym, on_delete=models.CASCADE, null=True, blank=True)
     fecha_inicio_gym = models.DateField(default=datetime.now, null=True)
