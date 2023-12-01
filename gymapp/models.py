@@ -6,6 +6,8 @@ from django.core.files import File
 from datetime import timedelta
 from django.utils import timezone
 import tempfile 
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 
 
 # Create your models here.
@@ -27,6 +29,32 @@ def generar_codigo_qr(data):
 
     # Devolver el nombre del archivo temporal
     return temp_file.name
+
+class PlanDinamico(models.Model):
+    tipo_plan = models.CharField(max_length=20, unique=True)
+    precio = models.IntegerField(default=0)
+    dias = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.tipo_plan
+
+    def crear_plan_gym(self):
+        # Crear un nuevo Planes_gym
+        Planes_gym.objects.create(tipo_plan=self.tipo_plan, precio=self.precio, dias=self.dias)
+
+    def eliminar_plan_gym(self):
+        # Eliminar el Planes_gym correspondiente
+        Planes_gym.objects.filter(tipo_plan=self.tipo_plan).delete()
+
+@receiver(post_save, sender=PlanDinamico)
+def crear_plan_gym(sender, instance, **kwargs):
+    # Llamada al método crear_plan_gym en PlanDinamico cuando se guarda
+    instance.crear_plan_gym()
+
+@receiver(post_delete, sender=PlanDinamico)
+def eliminar_plan_gym(sender, instance, **kwargs):
+    # Llamada al método eliminar_plan_gym en PlanDinamico cuando se elimina
+    instance.eliminar_plan_gym()
 
 class Planes_gym(models.Model):
     TIPOS_PLAN = (

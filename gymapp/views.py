@@ -8,7 +8,7 @@ import numpy as np
 from django.urls import reverse_lazy, reverse
 from .models import Usuario_gym, Planes_gym, Asistencia, Articulo, RegistroGanancia
 from datetime import datetime
-from .forms import AsistenciaForm, ArticuloForm
+from .forms import AsistenciaForm, ArticuloForm, PlanForm
 from django.http import JsonResponse
 from pyzbar.pyzbar import decode
 import pytz
@@ -401,6 +401,46 @@ def lista_asistencia(request):
     
     return JsonResponse({'asistencias': asistencias_lista, 'fechas': list(fechas), 'fecha_seleccionada': fecha_param, 'id_usuario': id_usuario_param})
 
+def obtener_planes_gym(request):
+    planes_gym = Planes_gym.objects.all()
+    
+    data = [{'tipo_plan': plan.get_tipo_plan_display(), 'precio': plan.precio, 'dias': plan.dias} for plan in planes_gym]
+    
+    return JsonResponse({'planes_gym': data})
+
+def crear_plan(request):
+    if request.method == 'POST':
+        # Obtén los datos del cuerpo de la solicitud en formato JSON
+        data = request.POST
+
+        # Crea un formulario con los datos recibidos
+        form = PlanForm(data)
+
+        if form.is_valid():
+            # Guarda el nuevo plan
+            nuevo_plan = form.save()
+
+            # Devuelve una respuesta JSON con información sobre el nuevo plan
+            response_data = {
+                'success': True,
+                'message': 'Plan creado con éxito',
+                'plan_id': nuevo_plan.id,
+                'tipo_plan': nuevo_plan.get_tipo_plan_display(),
+                'precio': nuevo_plan.precio,
+                'dias': nuevo_plan.dias,
+            }
+        else:
+            # Devuelve una respuesta JSON con errores si el formulario no es válido
+            response_data = {
+                'success': False,
+                'errors': form.errors,
+            }
+        print(response_data)
+        return JsonResponse(response_data)
+    else:
+        # Devuelve una respuesta JSON indicando que el método no está permitido
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
 # calculando tiempo de plan
 # @login_required(login_url='login')
 def plan(request, usuario_id=None):
@@ -441,6 +481,7 @@ def plan(request, usuario_id=None):
                         'fecha_inicio': usuario.fecha_inicio_gym,
                     }
                     tarjetas.append(tarjeta)
+                    
 
             tarjetas_ordenadas = sorted(tarjetas, key=lambda x: x['dias_restantes'])
 
@@ -552,7 +593,7 @@ def registros_ganancia(request):
                  'articulos_vendidos': [{'articulo': detalle.articulo.nombre,
                                          'cantidad_vendida': detalle.cantidad_vendida,
                                          'precio_unitario': float(detalle.articulo.precio),
-                                         'ganancia_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio),
+                                         'ganancia_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio),    
                                          'gasto_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio)}
                                         for detalle in registro.detalleventa_set.all()]
                  } for registro in registros_ganancia]
@@ -580,7 +621,7 @@ def registros_ganancia(request):
 
             articulo = Articulo.objects.get(pk=articulo_id)
 
-            DetalleVenta.objects.create(registro_ganancia=registro, articulo=articulo, cantidad_vendida=cantidad_vendida)
+            detalle.venta.objects.create(registro_ganancia=registro, articulo=articulo, cantidad_vendida=cantidad_vendida)
 
         # Calcular ganancia y gasto mensual
         registro.calcular_ganancia_mensual()
