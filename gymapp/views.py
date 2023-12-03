@@ -99,6 +99,18 @@ def usuario(request, id=None):
         ]
         return JsonResponse({'usuarios': usuarios_lista})
 
+def obtener_tipos_identificaciones(request):
+    usuario_gym = Usuario_gym.objects.all()
+    
+    # Utilizar un conjunto para eliminar duplicados
+    tipos_id_set = set(usuario.get_tipo_id_display() for usuario in usuario_gym)
+    
+    # Construir la lista de tipos de identificación única
+    data = [{'tipo_id': tipo_id} for tipo_id in tipos_id_set]
+
+    # Devolver la respuesta JSON
+    return JsonResponse({'tipos_id': data})
+
 
 
 class NuevoUsuario(CreateView): 
@@ -223,18 +235,10 @@ class EditarUsuario(UpdateView):
             except Planes_gym.DoesNotExist:
                 return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'})
 
-            fecha_inicio = form.cleaned_data.get('fecha_inicio_gym')
-
-            fecha_fin = fecha_inicio + timedelta(days=plan_instance.dias)
-
-            # Actualizar la instancia del formulario con la fecha_fin calculada
-            form.instance.fecha_fin = fecha_fin
-
-            # Desactivar la validación para el campo fecha_fin
-            form.fields['fecha_fin'].required = False
-
             # Guardar el formulario y obtener la instancia actualizada
             form.instance.save()
+
+            dias_restantes = (self.object.fecha_fin - datetime.now().date()).days
 
             response_data = {
             'success': True,
@@ -244,8 +248,8 @@ class EditarUsuario(UpdateView):
                 'apellido': form.instance.apellido,
                 'tipo_id': form.instance.tipo_id,
                 'id_usuario': form.instance.id_usuario,
-                'fecha_inicio_gym': fecha_inicio,
-                'fecha_fin': fecha_fin,
+                'tipo_plan' : plan_instance,
+                'dias_restantes': dias_restantes,
             }
 }
 

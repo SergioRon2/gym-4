@@ -17,6 +17,8 @@ urlpatterns = [
 
     path('usuarios/<int:id>', views.usuario, name='usuarios'),
 
+    path('obtener_tipos_id/', views.obtener_tipos_identificaciones, name='obtener-tipos-id'),
+
     path('lector/',views.lector, name='lector'),
 
     path('asistencias/', views.lista_asistencia, name='lista_asistencias'),
