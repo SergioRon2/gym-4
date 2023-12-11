@@ -23,6 +23,8 @@ from django.utils import timezone
 from datetime import timedelta
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
+from rest_framework.views import APIView
+from rest_framework.decorators import api_view
 
 
 
@@ -226,47 +228,62 @@ class EditarUsuario(UpdateView):
     fields = '__all__'
     success_url = reverse_lazy('plan')
 
-    def form_valid(self, form):
-        tipo_plan = form.cleaned_data.get('plan').tipo_plan
+@api_view(['PUT'])
+def editar_usuario(request, pk):
+    if request.method == 'PUT':
+        try:
+            usuario = Usuario_gym.objects.get(pk=pk)
+        except Usuario_gym.DoesNotExist:
+            return JsonResponse({'success': False, 'mensaje': 'Usuario no encontrado.'}, status=404)
+
+        data = json.loads(request.body.decode('utf-8'))
+        tipo_plan = data.get('plan')
 
         if tipo_plan:
             try:
                 plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan)
             except Planes_gym.DoesNotExist:
-                return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'})
+                return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'}, status=400)
 
-            # Guardar el formulario y obtener la instancia actualizada
-            form.instance.save()
+            fecha_inicio_gym_str = data.get('fecha_inicio_gym')
 
-            dias_restantes = (self.object.fecha_fin - datetime.now().date()).days
+            if fecha_inicio_gym_str:
+                try:
+                    fecha_inicio_gym = datetime.strptime(fecha_inicio_gym_str, '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({'success': False, 'mensaje': 'Fecha de inicio inválida.'}, status=400)
+            else:
+                return JsonResponse({'success': False, 'mensaje': 'Fecha de inicio no especificada.'}, status=400)
+
+            fecha_fin = fecha_inicio_gym + timedelta(days=plan_instance.dias)
+
+            # Actualiza los campos del modelo
+            usuario.fecha_inicio_gym = fecha_inicio_gym
+            usuario.fecha_fin = fecha_fin
+            usuario.plan = plan_instance
+            usuario.save()
 
             response_data = {
-            'success': True,
-            'mensaje': 'Usuario actualizado correctamente.',
-            'usuario': {
-                'nombre': form.instance.nombre,
-                'apellido': form.instance.apellido,
-                'tipo_id': form.instance.tipo_id,
-                'id_usuario': form.instance.id_usuario,
-                'tipo_plan' : plan_instance,
-                'dias_restantes': dias_restantes,
+                'success': True,
+                'mensaje': 'Usuario actualizado correctamente.',
+                'usuario': {
+                    'nombre': usuario.nombre,
+                    'apellido': usuario.apellido,
+                    'tipo_id': usuario.tipo_id,
+                    'id_usuario': usuario.id_usuario,
+                    'tipo_plan': plan_instance.tipo_plan,
+                    'fecha_inicio_gym': fecha_inicio_gym_str,
+                    'fecha_fin': fecha_fin.strftime('%Y-%m-%d'),
+                }
             }
-}
 
-
-            print("Datos del usuario actualizado:", response_data['usuario'])
             return JsonResponse(response_data)
 
-        return JsonResponse({'success': False, 'mensaje': 'No se pudo guardar o tipo de plan no especificado.'})
+        return JsonResponse({'success': False, 'mensaje': 'No se pudo guardar o tipo de plan no especificado.'}, status=400)
 
+    return JsonResponse({'success': False, 'mensaje': 'Método no permitido'}, status=405)
 
-    def form_invalid(self, form):
-        response_data = {
-            'success': False,
-            'mensaje': 'Error al actualizar el usuario.',
-            'errores': form.errors,
-        }
-        return JsonResponse(response_data)
+        
     
 class DetalleUsuario(DetailView):
     model = Usuario_gym

@@ -35,7 +35,7 @@ urlpatterns = [
 
     path('detalle/<int:pk>', views.DetalleUsuario.as_view(), name='detalle'),
 
-    path('editar/<int:pk>', views.EditarUsuario.as_view(), name='editar'),
+    path('editar/<int:pk>', views.editar_usuario, name='editar'),
 
     path('eliminar/<int:pk>', views.EliminarUsuario.as_view(), name='eliminar'),
 
