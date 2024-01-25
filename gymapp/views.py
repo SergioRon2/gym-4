@@ -432,6 +432,10 @@ def lista_asistencia(request):
 
 
 
+
+
+
+
 def obtener_planes_gym(request):
     planes_gym = Planes_gym.objects.all()
     
@@ -471,6 +475,52 @@ def crear_plan(request):
     else:
         # Devuelve una respuesta JSON indicando que el método no está permitido
         return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+def editar_plan(request, plan_id):
+    # Obtiene el plan existente por su ID
+    try:
+        plan = Planes_gym.objects.get(id=plan_id)
+    except Planes_gym.DoesNotExist:
+        return JsonResponse({'error': 'Plan no encontrado'}, status=404)
+
+    if request.method == 'PUT':
+        # Obtiene los datos del cuerpo de la solicitud en formato JSON
+        data = request.POST
+
+        # Crea un formulario con los datos recibidos y el plan existente
+        form = PlanForm(data, instance=plan)
+
+        if form.is_valid():
+            # Guarda la actualización del plan
+            plan_actualizado = form.save()
+
+            # Devuelve una respuesta JSON con información sobre el plan actualizado
+            response_data = {
+                'success': True,
+                'message': 'Plan actualizado con éxito',
+                'plan_id': plan_actualizado.id,
+                'tipo_plan': plan_actualizado.get_tipo_plan_display(),
+                'precio': plan_actualizado.precio,
+                'dias': plan_actualizado.dias,
+            }
+        else:
+            # Devuelve una respuesta JSON con errores si el formulario no es válido
+            response_data = {
+                'success': False,
+                'errors': form.errors,
+            }
+
+        print(response_data)
+        return JsonResponse(response_data)
+    else:
+        # Devuelve una respuesta JSON indicando que el método no está permitido
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+
+
+
 
 # calculando tiempo de plan
 # @login_required(login_url='login')
