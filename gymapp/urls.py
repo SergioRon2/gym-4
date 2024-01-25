@@ -17,6 +17,8 @@ urlpatterns = [
 
     path('usuarios/<int:id>', views.usuario, name='usuarios'),
 
+    path('obtener_tipos_id/', views.obtener_tipos_identificaciones, name='obtener-tipos-id'),
+
     path('lector/',views.lector, name='lector'),
 
     path('asistencias/', views.lista_asistencia, name='lista_asistencias'),
@@ -33,7 +35,7 @@ urlpatterns = [
 
     path('detalle-usuario/<int:pk>', views.DetalleUsuario.as_view(), name='detalle-usuario'),
 
-    path('editar/<int:pk>', views.EditarUsuario.as_view(), name='editar'),
+    path('editar/<int:pk>', views.editar_usuario, name='editar'),
 
     path('eliminar/<int:pk>', views.EliminarUsuario.as_view(), name='eliminar'),
 

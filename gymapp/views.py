@@ -23,6 +23,9 @@ from django.utils import timezone
 from datetime import timedelta
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
+from rest_framework.views import APIView
+from rest_framework.decorators import api_view
+
 
 
 class Logueo(LoginView):
@@ -101,6 +104,18 @@ def usuario(request, id=None):
             return JsonResponse({'usuarios': usuarios_lista})
     except Exception as e:
         return JsonResponse({'Error al recibir la informacion de los usuarios'})
+
+def obtener_tipos_identificaciones(request):
+    usuario_gym = Usuario_gym.objects.all()
+    
+    # Utilizar un conjunto para eliminar duplicados
+    tipos_id_set = set(usuario.get_tipo_id_display() for usuario in usuario_gym)
+    
+    # Construir la lista de tipos de identificación única
+    data = [{'tipo_id': tipo_id} for tipo_id in tipos_id_set]
+
+    # Devolver la respuesta JSON
+    return JsonResponse({'tipos_id': data})
 
 
 
@@ -218,41 +233,53 @@ class EditarUsuario(UpdateView):
     fields = '__all__'
     success_url = reverse_lazy('plan')
 
-    def form_valid(self, form):
-        tipo_plan = form.cleaned_data.get('plan').tipo_plan
+@api_view(['PUT'])
+def editar_usuario(request, pk):
+    if request.method == 'PUT':
+        try:
+            usuario = Usuario_gym.objects.get(pk=pk)
+        except Usuario_gym.DoesNotExist:
+            return JsonResponse({'success': False, 'mensaje': 'Usuario no encontrado.'}, status=404)
+
+        data = json.loads(request.body.decode('utf-8'))
+        tipo_plan = data.get('plan')
 
         if tipo_plan:
             try:
                 plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan.get_tipo_plan_display())
             except Planes_gym.DoesNotExist:
-                return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'})
+                return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'}, status=400)
 
-            fecha_inicio = form.cleaned_data.get('fecha_inicio_gym')
+            fecha_inicio_gym_str = data.get('fecha_inicio_gym')
 
-            fecha_fin = fecha_inicio + timedelta(days=plan_instance.dias)
+            if fecha_inicio_gym_str:
+                try:
+                    fecha_inicio_gym = datetime.strptime(fecha_inicio_gym_str, '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({'success': False, 'mensaje': 'Fecha de inicio inválida.'}, status=400)
+            else:
+                return JsonResponse({'success': False, 'mensaje': 'Fecha de inicio no especificada.'}, status=400)
 
-            # Actualizar la instancia del formulario con la fecha_fin calculada
-            form.instance.fecha_fin = fecha_fin
+            fecha_fin = fecha_inicio_gym + timedelta(days=plan_instance.dias)
 
-            # Desactivar la validación para el campo fecha_fin
-            form.fields['fecha_fin'].required = False
-
-            # Guardar el formulario y obtener la instancia actualizada
-            form.instance.save()
+            # Actualiza los campos del modelo
+            usuario.fecha_inicio_gym = fecha_inicio_gym
+            usuario.fecha_fin = fecha_fin
+            usuario.plan = plan_instance
+            usuario.save()
 
             response_data = {
-            'success': True,
-            'mensaje': 'Usuario actualizado correctamente.',
-            'usuario': {
-                'nombre': form.instance.nombre,
-                'apellido': form.instance.apellido,
-                'tipo_id': form.instance.tipo_id,
-                'id_usuario': form.instance.id_usuario,
-                'plan' : tipo_plan.get_tipo_plan_display(),
-                'fecha_inicio_gym': fecha_inicio,
-                'fecha_fin': fecha_fin,
+                'success': True,
+                'mensaje': 'Usuario actualizado correctamente.',
+                'usuario': {
+                'nombre': usuario.nombre,
+                'apellido': usuario.apellido,
+                'tipo_id': usuario.tipo_id,
+                'id_usuario': usuario.id_usuario,
+                'tipo_plan': plan_instance.tipo_plan,
+                'fecha_inicio_gym': fecha_inicio_gym_str,
+                'fecha_fin': fecha_fin.strftime('%Y-%m-%d'),
             }
-
 }
 
 
@@ -269,7 +296,6 @@ class EditarUsuario(UpdateView):
             'errores': form.errors,
         }
         return JsonResponse(response_data)
-
     
 class DetalleUsuario(DetailView):
     model = Usuario_gym
