@@ -1,8 +1,0 @@
-body {
-    background-image: url("/static/img/bg-main.jpg");
-    background-size: cover;
-}
-
-.navbar {
-    background-color: rgb(150, 184, 230);
-}

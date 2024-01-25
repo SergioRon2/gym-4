@@ -20,18 +20,18 @@ urlpatterns = [
     path('lector/',views.lector, name='lector'),
 
     path('asistencias/', views.lista_asistencia, name='lista_asistencias'),
-    
-    path('plan/', views.plan, name='plan'),
 
-    path('obtener_plan/', views.obtener_planes_gym, name='obtener-plan'),
+    path('plan-usuario/', views.plan_usuario, name='plan'),
 
-    path('crear_plan/', views.crear_plan, name='crear_plan'),
+    path('planes/', views.obtener_planes_gym, name='planes'),
 
-    path('plan/<int:usuario_id>/', views.plan, name='plan_usuario'),
+    path('crear_plan/', views.crear_planes_gym, name='crear_plan'),
+
+    path('plan-usuario/<int:usuario_id>/', views.plan_usuario, name='plan_usuario'),
 
     path('nuevo_usuario/', views.nuevo_usuarioR, name='nuevo_usuario'),
 
-    path('detalle/<int:pk>', views.DetalleUsuario.as_view(), name='detalle'),
+    path('detalle-usuario/<int:pk>', views.DetalleUsuario.as_view(), name='detalle-usuario'),
 
     path('editar/<int:pk>', views.EditarUsuario.as_view(), name='editar'),
 
