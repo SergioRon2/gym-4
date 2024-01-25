@@ -17,17 +17,17 @@ urlpatterns = [
 
     path('usuarios/<int:id>', views.usuario, name='usuarios'),
 
-    path('obtener_tipos_id/', views.obtener_tipos_identificaciones, name='obtener-tipos-id'),
+    path('tipos-id/', views.obtener_tipos_identificaciones, name='tipos-id'),
 
     path('lector/',views.lector, name='lector'),
 
     path('asistencias/', views.lista_asistencia, name='lista_asistencias'),
-
+    
     path('plan-usuario/', views.plan_usuario, name='plan'),
 
     path('planes/', views.obtener_planes_gym, name='planes'),
 
-    path('crear_plan/', views.crear_planes_gym, name='crear_plan'),
+    path('crear_plan/', views.crear_plan, name='crear_plan'),
 
     path('plan-usuario/<int:usuario_id>/', views.plan_usuario, name='plan_usuario'),
 

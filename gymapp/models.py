@@ -8,6 +8,10 @@ from django.utils import timezone
 import tempfile 
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from dateutil.relativedelta import relativedelta
+from datetime import timedelta
+from django.utils import timezone
+
 
 
 # Create your models here.
@@ -42,13 +46,12 @@ class Planes_gym(models.Model):
 class Usuario_gym(models.Model):
     
     tipos_id_choice=[
-        ('cedula','Cédula de Ciudadanía'),
-        ('ti', 'Tarjeta de Identidad'),
-        ('ce', 'Cédula de Extranjería'),
-        ('pasaporte','Pasaporte'),
-        ('pep','Permiso Especial de Permanencia'),
+        ('Cédula de Ciudadanía','Cédula de Ciudadanía'),
+        ('Tarjeta de Identidad', 'Tarjeta de Identidad'),
+        ('Cédula de Extranjería', 'Cédula de Extranjería'),
+        ('Pasaporte','Pasaporte'),
+        ('Permiso Especial de Permanencia','Permiso Especial de Permanencia'),
     ]
-    
     
     nombre = models.CharField(max_length=50)
     apellido = models.CharField(max_length=50)
@@ -71,13 +74,19 @@ class Usuario_gym(models.Model):
             self.fecha_fin = self.fecha_inicio_gym + timedelta(days=self.plan.dias)
 
         super().save(*args, **kwargs)
+        
+        if self.plan and not self.fecha_fin:
+            if self.plan.tipo_plan == 'Anual':  # Utilizar relativedelta solo para el plan anual
+                self.fecha_fin = self.fecha_inicio_gym + relativedelta(years=1)
+            else:
+                # Utilizar timedelta para otros tipos de planes
+                self.fecha_fin = self.fecha_inicio_gym + timedelta(days=self.plan.dias)
 
     def dias_restantes(self):
         if self.fecha_fin:
             dias_restantes = (self.fecha_fin - timezone.now().date()).days
             return dias_restantes if dias_restantes >= 0 else 0
         return 0
-
 
 
 class Asistencia(models.Model):

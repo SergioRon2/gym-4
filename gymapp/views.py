@@ -28,6 +28,7 @@ from rest_framework.decorators import api_view
 
 
 
+
 class Logueo(LoginView):
     template_name= 'gymapp/login.html'
     fields= '__all__'
@@ -75,47 +76,42 @@ def obtener_csrf_token(request):
 
 # @login_required(login_url='login')
 def usuario(request, id=None):
-    
-    try:
-        if id:
-            # Si se proporciona un ID, obtenemos ese usuario específico
-            usuario = get_object_or_404(Usuario_gym, id=id)
-            usuario_dict = {
+    if id:
+        # Si se proporciona un ID, obtenemos ese usuario específico
+        usuario = get_object_or_404(Usuario_gym, id=id)
+        usuario_dict = {
+            'id': usuario.id,
+            'nombre': usuario.nombre,
+            'apellido': usuario.apellido,
+            'tipo_id': usuario.tipo_id,
+            'id_usuario': usuario.id_usuario
+        }
+        return JsonResponse({'usuario': usuario_dict})
+    else:
+        # Si no se proporciona un ID, devolvemos la lista de todos los usuarios
+        usuarios = Usuario_gym.objects.all()
+        usuarios_lista = [
+            {
                 'id': usuario.id,
                 'nombre': usuario.nombre,
                 'apellido': usuario.apellido,
                 'tipo_id': usuario.tipo_id,
                 'id_usuario': usuario.id_usuario
             }
-            return JsonResponse({'usuario': usuario_dict})
-        else:
-            # Si no se proporciona un ID, devolvemos la lista de todos los usuarios
-            usuarios = Usuario_gym.objects.all()
-            usuarios_lista = [
-                {
-                    'id': usuario.id,
-                    'nombre': usuario.nombre,
-                    'apellido': usuario.apellido,
-                    'tipo_id': usuario.tipo_id,
-                    'id_usuario': usuario.id_usuario,
-                }
-                for usuario in usuarios
-            ]
-            return JsonResponse({'usuarios': usuarios_lista})
-    except Exception as e:
-        return JsonResponse({'Error al recibir la informacion de los usuarios'})
+            for usuario in usuarios
+        ]
+        return JsonResponse({'usuarios': usuarios_lista})
 
 def obtener_tipos_identificaciones(request):
-    usuario_gym = Usuario_gym.objects.all()
     
-    # Utilizar un conjunto para eliminar duplicados
-    tipos_id_set = set(usuario.get_tipo_id_display() for usuario in usuario_gym)
-    
-    # Construir la lista de tipos de identificación única
-    data = [{'tipo_id': tipo_id} for tipo_id in tipos_id_set]
+    tipos_id_posibles = dict(Usuario_gym.tipos_id_choice)
+
+    # Construir la lista de todos los tipos de identificación posibles
+    data = [{'tipo_id': value} for value in tipos_id_posibles]
 
     # Devolver la respuesta JSON
     return JsonResponse({'tipos_id': data})
+
 
 
 
@@ -163,6 +159,7 @@ def nuevo_usuarioR(request):
                 plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan)
             except Planes_gym.DoesNotExist:
                 # Manejar el caso cuando el tipo de plan no existe en la base de datos
+                print(f'Tipo de plan inválido: {tipo_plan}')
                 return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'})
 
             # Obtener la fecha_inicio_gym del JSON
@@ -196,7 +193,6 @@ def nuevo_usuarioR(request):
                     'mensaje': 'Usuario creado correctamente.',
                     'usuario': new_user_gym_dict,
                 }
-                print(plan_instance)
 
                 return JsonResponse(response_data)
 
@@ -246,7 +242,7 @@ def editar_usuario(request, pk):
 
         if tipo_plan:
             try:
-                plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan.get_tipo_plan_display())
+                plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan)
             except Planes_gym.DoesNotExist:
                 return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'}, status=400)
 
@@ -317,7 +313,7 @@ class DetalleUsuario(DetailView):
             'tipo_id': self.object.get_tipo_id_display(),
             'id_usuario': self.object.id_usuario,
             'fecha_inicio_gym': self.object.fecha_inicio_gym,
-            'tipo_plan': self.object.plan.tipo_plan,
+            'tipo_plan': plan.tipo_plan,
             'precio': plan.precio,
             'dias_restantes': dias_restantes,
             # Agrega más campos según sea necesario
@@ -385,13 +381,13 @@ def lector(request):
                         'codigo': codigo_qr,
                         'name':full_name,
                         # Nombre de la URL a la que deseas redirigir al usuario
-                    }
+                        }
 
                     # Devuelve los datos como JSON
                     return JsonResponse(response_data)
                     # return JsonResponse({'success': True, 'mensaje': mensaje})
-                else:
-                    mensaje = 'No se encontró un archivo coincidente en la carpeta media.'
+
+            mensaje = 'No se encontró un archivo coincidente en la carpeta media.'
             return JsonResponse({'success': False, 'mensaje': mensaje})
 
         else:
@@ -436,19 +432,14 @@ def lista_asistencia(request):
 
 
 
-
-
 def obtener_planes_gym(request):
     planes_gym = Planes_gym.objects.all()
-
+    
     data = [{'id' : plan.id, 'tipo_plan': plan.tipo_plan, 'precio': plan.precio, 'dias': plan.dias} for plan in planes_gym]
     
     return JsonResponse({'planes_gym': data})
-    
 
-
-
-def crear_planes_gym(request):
+def crear_plan(request):
     if request.method == 'POST':
         # Obtén los datos del cuerpo de la solicitud en formato JSON
         data = request.POST
@@ -481,15 +472,7 @@ def crear_planes_gym(request):
         # Devuelve una respuesta JSON indicando que el método no está permitido
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-
-
-
-
-
-
-
-
-
+# calculando tiempo de plan
 # @login_required(login_url='login')
 def plan_usuario(request, usuario_id=None):
     try:
@@ -499,7 +482,7 @@ def plan_usuario(request, usuario_id=None):
             dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
 
             tarjeta = {
-                'id_usuario': usuario.id,
+                'id': usuario.id,
                 'nombre_usuario': usuario.nombre,
                 'apellido_usuario': usuario.apellido,
                 'tipo_id_usuario': usuario.get_tipo_id_display(),
@@ -519,9 +502,9 @@ def plan_usuario(request, usuario_id=None):
             for usuario in usuarios:
                 dias_restantes = (usuario.fecha_fin - datetime.now().date()).days
 
-                if -365 <= dias_restantes <= 365:
+                if -365 <= dias_restantes <= 366:
                     tarjeta = {
-                        'id_usuario': usuario.id,
+                        'id': usuario.id,
                         'nombre_usuario': usuario.nombre,
                         'apellido_usuario': usuario.apellido,
                         'tipo_id_usuario': usuario.get_tipo_id_display(),
@@ -531,6 +514,7 @@ def plan_usuario(request, usuario_id=None):
                         'tipo_plan_gym': usuario.plan.tipo_plan,
                         'precio_plan_gym': usuario.plan.precio,
                         'dias_plan_gym': usuario.plan.dias,
+                        'fecha_fin' : usuario.fecha_fin,
                     }
                     tarjetas.append(tarjeta)
 
@@ -549,8 +533,7 @@ def plan_usuario(request, usuario_id=None):
 
 
 
-
-
+# -----------------------------------------------------------------------------------------------
 
 
 

@@ -1,0 +1,29 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'login.css' %}">
+    <title>Ingresar</title>
+</head>
+
+<body>
+
+    <form action="" method="POST">
+        {% csrf_token %}
+        <div class="row form-control">
+            <label>{{form.username.label}}
+        </label> {{form.username}}
+            <label>{{form.password.label}}
+        </label> {{form.password}}
+            <div class="row ingresar">
+                <input class="btn btn-success mx-0 my-4" type="submit" value="Ingresar">
+            </div>
+        </div>
+
+    </form>
+</body>
+
+</html>
