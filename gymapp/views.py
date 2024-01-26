@@ -313,6 +313,7 @@ class DetalleUsuario(DetailView):
             'tipo_id': self.object.get_tipo_id_display(),
             'id_usuario': self.object.id_usuario,
             'fecha_inicio_gym': self.object.fecha_inicio_gym,
+            'fecha_fin' : self.object.fecha_fin,
             'tipo_plan': plan.tipo_plan,
             'precio': plan.precio,
             'dias_restantes': dias_restantes,
