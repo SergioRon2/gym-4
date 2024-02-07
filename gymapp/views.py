@@ -8,11 +8,13 @@ import numpy as np
 from django.urls import reverse_lazy, reverse
 from .models import Usuario_gym, Planes_gym, Asistencia, Articulo, RegistroGanancia
 from datetime import datetime
-from .forms import AsistenciaForm, ArticuloForm, PlanForm
-from django.http import JsonResponse
+from .forms import AsistenciaForm, ArticuloForm, PlanesForm
+from django.http import JsonResponse, HttpResponse
 from pyzbar.pyzbar import decode
 import pytz
 import cv2
+import qrcode
+from django.core.files.storage import default_storage
 from dateutil import parser
 from django.db.models import DateField
 from django.db.models.functions import Trunc
@@ -25,6 +27,7 @@ from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
+from django.views.decorators.csrf import csrf_exempt
 
 
 
@@ -120,32 +123,8 @@ class NuevoUsuario(CreateView):
     fields = '__all__'
     success_url = reverse_lazy('plan')
 
-    def form_valid(self, form):
-        # Lógica adicional si es necesario
-        # Aquí puedes acceder a los datos del formulario antes de guardarlo
-        # y realizar acciones adicionales si es necesario.
-        tipo_plan = form.cleaned_data.get('plan').tipo_plan
-        try:
-            # Intenta obtener una instancia de Planes_gym según el tipo proporcionado
-            plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan)
-        except Planes_gym.DoesNotExist:
-            # Manejar el caso cuando el tipo de plan no existe en la base de datos
-            return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'})
-
-        # Calcula la fecha_fin según el tipo de plan
-        fecha_fin = timezone.now().date() + timedelta(days=plan_instance.dias)
-
-        # Establece la fecha_fin en el formulario antes de guardarlo
-        form.instance.fecha_fin = fecha_fin
-
-        # Guarda el formulario y obtén la respuesta predeterminada
-        response = super().form_valid(form)
-
-        # Puedes realizar acciones adicionales después de guardar el formulario si es necesario
-
-        return response
-
 # La vista basada en funciones sigue siendo útil si necesitas una API específica
+@csrf_exempt
 def nuevo_usuarioR(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
@@ -346,15 +325,16 @@ class EliminarUsuario(DeleteView):
 
 
 # @login_required(login_url='login')
+@csrf_exempt
 def lector(request):
-    
+
     if request.method == 'POST' and request.FILES['imagen']:
         imagen = request.FILES['imagen']
 
         # Haz lo que necesites con la imagen, por ejemplo, guardarla en el servidor.
-        
+
         qr_data = decode(cv2.imdecode(np.frombuffer(imagen.read(), np.uint8), -1))
-        
+
         if qr_data:
             # Si se encontró un código QR en la imagen
             codigo_qr = qr_data[0].data.decode('utf-8')
@@ -362,7 +342,7 @@ def lector(request):
             # Ruta a la carpeta media
             current_directory = os.path.dirname(os.path.abspath(__file__))
             ruta_carpeta_media = os.path.join(current_directory, '../media/gymapp') 
-            
+
             usuario = Usuario_gym.objects.filter(id_usuario=codigo_qr).first()
             nombre_usuario = usuario.nombre  # Obtén el nombre del usuario
             apellido_usuario = usuario.apellido  # Obtén el apellido del usuario si es necesario
@@ -396,8 +376,6 @@ def lector(request):
             print('No se encontró un código QR en la imagen.')
             return JsonResponse({'success': False, 'mensaje': 'No se encontró un código QR en la imagen.'})
 
-    # Si es una solicitud GET, simplemente renderiza la página HTML
-    return render(request, 'gymapp/qr.html')
 
 # @login_required(login_url='login')
 def lista_asistencia(request):
@@ -428,7 +406,7 @@ def lista_asistencia(request):
 
     # Convertir queryset a lista de diccionarios para JsonResponse
     asistencias_lista = list(asistencias.values())
-    
+
     return JsonResponse({'asistencias': asistencias_lista, 'fechas': list(fechas), 'fecha_seleccionada': fecha_param, 'id_usuario': id_usuario_param})
 
 
@@ -444,26 +422,26 @@ def obtener_planes_gym(request):
     
     return JsonResponse({'planes_gym': data})
 
+@csrf_exempt
 def crear_plan(request):
     if request.method == 'POST':
         # Obtén los datos del cuerpo de la solicitud en formato JSON
-        data = request.POST
-
+        data = json.loads(request.body)
         # Crea un formulario con los datos recibidos
-        form = PlanForm(data)
-
+        form = PlanesForm(data)
         if form.is_valid():
             # Guarda el nuevo plan
             nuevo_plan = form.save()
-
             # Devuelve una respuesta JSON con información sobre el nuevo plan
             response_data = {
                 'success': True,
                 'message': 'Plan creado con éxito',
-                'plan_id': nuevo_plan.id,
-                'tipo_plan': nuevo_plan.get_tipo_plan_display(),
-                'precio': nuevo_plan.precio,
-                'dias': nuevo_plan.dias,
+                'data' : {
+                    'plan_id': nuevo_plan.id,
+                    'tipo_plan': nuevo_plan.tipo_plan,
+                    'precio': nuevo_plan.precio,
+                    'dias': nuevo_plan.dias,
+                }
             }
         else:
             # Devuelve una respuesta JSON con errores si el formulario no es válido
@@ -472,6 +450,7 @@ def crear_plan(request):
                 'errors': form.errors,
             }
         print(response_data)
+        print('datos recibidos: ', data)
         return JsonResponse(response_data)
     else:
         # Devuelve una respuesta JSON indicando que el método no está permitido
@@ -487,10 +466,10 @@ def editar_plan(request, plan_id):
 
     if request.method == 'PUT':
         # Obtiene los datos del cuerpo de la solicitud en formato JSON
-        data = request.POST
+        data = json.loads(request.body)
 
         # Crea un formulario con los datos recibidos y el plan existente
-        form = PlanForm(data, instance=plan)
+        form = PlanesForm(data, instance=plan)
 
         if form.is_valid():
             # Guarda la actualización del plan
@@ -501,7 +480,7 @@ def editar_plan(request, plan_id):
                 'success': True,
                 'message': 'Plan actualizado con éxito',
                 'plan_id': plan_actualizado.id,
-                'tipo_plan': plan_actualizado.get_tipo_plan_display(),
+                'tipo_plan': plan_actualizado.tipo_plan,
                 'precio': plan_actualizado.precio,
                 'dias': plan_actualizado.dias,
             }
@@ -519,7 +498,18 @@ def editar_plan(request, plan_id):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
+def eliminar_plan(request, plan_id):
+    if request.method == 'DELETE':
+        # Busca el plan por su ID
+        plan = get_object_or_404(Planes_gym, id=plan_id)
 
+        # Elimina el plan de la base de datos
+        plan.delete()
+
+        # Devuelve una respuesta JSON indicando que el plan ha sido eliminado con éxito
+        return JsonResponse({'success': True, 'message': 'Plan eliminado con éxito'})
+    else:
+        return JsonResponse({'success': False, 'message': 'Metodo no permitido'})
 
 
 

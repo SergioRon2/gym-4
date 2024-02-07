@@ -1,6 +1,7 @@
-$(document).ready(function() {
-    $('#imagenInput').change(function() {
-        var archivo = $(this)[0].files[0];
+document.addEventListener('DOMContentLoaded', function() {
+    var imagenInput = document.getElementById('imagenInput');
+    imagenInput.addEventListener('change', function() {
+        var archivo = this.files[0];
 
         if (archivo) {
             var reader = new FileReader();
@@ -9,7 +10,7 @@ $(document).ready(function() {
                 img.onload = function() {
                     var canvas = document.createElement('canvas');
                     var ctx = canvas.getContext('2d');
-                    var MAX_WIDTH = 800; // Tamaño máximo deseado para la imagen
+                    var MAX_WIDTH = 800;
                     var MAX_HEIGHT = 600;
 
                     var width = img.width;
@@ -31,46 +32,39 @@ $(document).ready(function() {
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    var resizedImageDataUrl = canvas.toDataURL('image/jpeg', 0.7); // Comprime la imagen al 70% de calidad
+                    var resizedImageDataUrl = canvas.toDataURL('image/jpeg', 0.7);
                     var resizedBlob = dataURItoBlob(resizedImageDataUrl);
 
                     var formData = new FormData();
                     formData.append('imagen', resizedBlob, 'imagen.jpg');
 
-                    var csrftoken = getCookie('csrftoken');
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/gymapp/lector/', true);
+                    xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
 
-                    $.ajax({
-                        url: '/gymapp/lector/',
-                        type: 'POST',
-                        data: formData,
-                        processData: false,
-                        contentType: false,
-                        headers: {
-                            'X-CSRFToken': csrftoken
-                        },
-
-                        success: function(response) {
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            var response = JSON.parse(xhr.responseText);
                             console.log('Imagen enviada al backend con éxito');
-                            $('#mensaje').text(response.mensaje);
+                            document.getElementById('mensaje').innerText = response.mensaje;
 
                             if (response.success) {
                                 console.log('si leo el success');
-                                var enlace = document.getElementById("miEnlace");
-
-                                // Agrega el ID del código QR a la URL
+                                var enlace = document.getElementById('miEnlace');
                                 var nuevaURL = enlace.href + '?codigo=' + response.codigo + '&nombre=' + response.name;
-
-                                // Actualiza el atributo href del enlace
                                 enlace.href = nuevaURL;
-
-                                // Haz clic en el enlace automáticamente
                                 enlace.click();
                             }
-                        },
-                        error: function(error) {
-                            console.error('Error al enviar la imagen al backend: ', error);
+                        } else {
+                            console.error('Error al enviar la imagen al backend: ', xhr.responseText);
                         }
-                    });
+                    };
+
+                    xhr.onerror = function() {
+                        console.error('Error de red al enviar la imagen al backend');
+                    };
+
+                    xhr.send(formData);
                 };
                 img.src = event.target.result;
             };
@@ -87,7 +81,7 @@ $(document).ready(function() {
         for (var i = 0; i < byteString.length; i++) {
             ia[i] = byteString.charCodeAt(i);
         }
-        return new Blob([ab], { type: 'image/jpeg' }); // Cambiado a 'image/jpeg'
+        return new Blob([ab], { type: 'image/jpeg' });
     }
 
     function getCookie(name) {
@@ -105,7 +99,3 @@ $(document).ready(function() {
         return cookieValue;
     }
 });
-
-
-// 
-// Obtener todos los botones "Pagar"

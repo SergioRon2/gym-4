@@ -21,7 +21,7 @@ class AsistenciaForm(forms.ModelForm):
         return id_usuario
     
 
-class PlanForm(forms.ModelForm):
+class PlanesForm(forms.ModelForm):
     class Meta:
         model = Planes_gym
         fields = ['tipo_plan', 'precio', 'dias']

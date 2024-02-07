@@ -18,7 +18,7 @@ urlpatterns = [
 
     # -------------------------------------------------------------------------------
 
-    path('lector/',views.lector, name='lector'),
+    path('lector/', views.lector, name='lector'),
 
     path('asistencias/', views.lista_asistencia, name='lista_asistencias'),
 
@@ -32,9 +32,11 @@ urlpatterns = [
 
     path('planes/', views.obtener_planes_gym, name='planes'),
 
-    path('crear_plan/', views.crear_plan, name='crear_plan'),
+    path('crear-plan/', views.crear_plan, name='crear_plan'),
 
     path('editar-plan/<int:plan_id>', views.editar_plan, name='editar-plan'),
+
+    path('eliminar-plan/<int:plan_id>', views.eliminar_plan, name='eliminar-plan'),
 
     # ---------------------------------------------------------------------------------
 
