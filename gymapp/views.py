@@ -9,7 +9,7 @@ from django.urls import reverse_lazy, reverse
 from .models import Usuario_gym, Planes_gym, Asistencia, Articulo, RegistroGanancia
 from datetime import datetime
 from .forms import AsistenciaForm, ArticuloForm, PlanesForm
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseBadRequest
 from pyzbar.pyzbar import decode
 import pytz
 import cv2
@@ -216,7 +216,7 @@ def editar_usuario(request, pk):
         except Usuario_gym.DoesNotExist:
             return JsonResponse({'success': False, 'mensaje': 'Usuario no encontrado.'}, status=404)
 
-        data = json.loads(request.body.decode('utf-8'))
+        data = json.loads(request.body)
         tipo_plan = data.get('plan')
 
         if tipo_plan:
@@ -254,10 +254,8 @@ def editar_usuario(request, pk):
                 'tipo_plan': plan_instance.tipo_plan,
                 'fecha_inicio_gym': fecha_inicio_gym_str,
                 'fecha_fin': fecha_fin.strftime('%Y-%m-%d'),
+                }
             }
-}
-
-
             print("Datos del usuario actualizado:", response_data['usuario'])
             return JsonResponse(response_data)
 
@@ -377,41 +375,90 @@ def lector(request):
             return JsonResponse({'success': False, 'mensaje': 'No se encontró un código QR en la imagen.'})
 
 
-# @login_required(login_url='login')
-def lista_asistencia(request):
-    fecha_param = request.GET.get('fecha')
-    id_usuario_param = request.GET.get('id_usuario')
 
-    asistencias = Asistencia.objects.all()
+# ---------------------------------------------------------------------------------------------
 
-    # Filtrar por fecha si se proporciona una fecha válida
-    if fecha_param:
+
+def consulta_asistencia(request, usuario_id=None):
+    if usuario_id:
+        # Si se proporciona un usuario_id, consultar asistencia específica para ese usuario
+        usuario = get_object_or_404(Usuario_gym, pk=usuario_id)
+        fecha_actual = timezone.now().date()
         try:
-            fecha = parser.parse(fecha_param).date()
-            asistencias = asistencias.filter(fecha=fecha)
-        except ValueError:
-            return JsonResponse({'error': 'Formato de fecha inválido'})
+            asistencia = Asistencia.objects.get(usuario=usuario, fecha=fecha_actual)
+            presente = asistencia.presente
+            mensaje = f"Asistencia de {usuario} el {fecha_actual} está presente: {presente}"
+        except Asistencia.DoesNotExist:
+            presente = False
+            mensaje = f"No hay registro de asistencia para {usuario} el {fecha_actual}"
+        
+        return JsonResponse({'presente': presente, 'mensaje': mensaje})
+    else:
+        # Si no se proporciona usuario_id, listar todas las asistencias
+        fecha_param = request.GET.get('fecha')
+        id_usuario_param = request.GET.get('id_usuario')
 
-    # Filtrar por id_usuario si se proporciona un ID válido
-    if id_usuario_param:
-        asistencias = asistencias.filter(usuario__id_usuario=id_usuario_param)
+        asistencias = Asistencia.objects.all()
 
-    # Obtener fechas únicas de la base de datos y ordenarlas en orden descendente
-    fechas = (
-        Asistencia.objects.annotate(date=Trunc('fecha', 'day', output_field=DateField()))
-        .values('date')
-        .distinct()
-        .order_by('-date')
-    )
+        # Filtrar por fecha si se proporciona una fecha válida
+        if fecha_param:
+            try:
+                fecha = timezone.datetime.strptime(fecha_param, '%Y-%m-%d').date()
+                asistencias = asistencias.filter(fecha=fecha)
+            except ValueError:
+                return HttpResponseBadRequest('Formato de fecha inválido')
 
-    # Convertir queryset a lista de diccionarios para JsonResponse
-    asistencias_lista = list(asistencias.values())
+        # Filtrar por id_usuario si se proporciona un ID válido
+        if id_usuario_param:
+            asistencias = asistencias.filter(usuario__id=id_usuario_param)
 
-    return JsonResponse({'asistencias': asistencias_lista, 'fechas': list(fechas), 'fecha_seleccionada': fecha_param, 'id_usuario': id_usuario_param})
+        # Obtener fechas únicas de la base de datos y ordenarlas en orden descendente
+        fechas = (
+            Asistencia.objects.annotate(date=Trunc('fecha', 'day', output_field=DateField()))
+            .values('date')
+            .distinct()
+            .order_by('-date')
+        )
+
+        # Convertir queryset a lista de diccionarios para JsonResponse
+        asistencias_lista = list(asistencias.values())
+
+        return JsonResponse({'asistencias': asistencias_lista, 'fechas': list(fechas), 'fecha_seleccionada': fecha_param, 'id_usuario': id_usuario_param})
 
 
 
 
+@csrf_exempt
+def crear_asistencia(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        usuario_id = data.get('usuario_id')
+        presente = data.get('presente', False)  # Si no se proporciona, se asume False
+        fecha = data.get('fecha')  # Supongamos que recibes la fecha como cadena en formato YYYY-MM-DD
+
+        try:
+            # Buscar usuario por ID
+            usuario = Usuario_gym.objects.get(pk=usuario_id)
+            
+            # Crear la asistencia
+            asistencia = Asistencia(usuario=usuario, fecha=fecha, presente=presente)
+            asistencia.save()
+
+            # Devolver la respuesta con los datos de la asistencia creada
+            response_data = {
+                'usuario_id': usuario_id,
+                'nombre': usuario.nombre,
+                'identificacion': usuario.id_usuario,
+                'fecha': fecha,
+                'mensaje': 'Asistencia creada correctamente'
+            }
+            return JsonResponse(response_data, status=201)
+        except Usuario_gym.DoesNotExist:
+            return JsonResponse({'error': f'No se encontró un usuario con ID {usuario_id}'}, status=404)
+
+    return JsonResponse({'error': 'Se esperaba una solicitud POST'}, status=400)
+
+# ------------------------------------------------------------------
 
 
 

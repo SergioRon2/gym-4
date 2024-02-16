@@ -20,7 +20,11 @@ urlpatterns = [
 
     path('lector/', views.lector, name='lector'),
 
-    path('asistencias/', views.lista_asistencia, name='lista_asistencias'),
+    path('consulta-asistencia', views.consulta_asistencia, name='consulta-asistencia'),
+
+    path('consulta-asistencia/<int:usuario_id>/', views.consulta_asistencia, name='consulta-asistencia'),
+
+    path('crear-asistencia/', views.crear_asistencia, name='crear_asistencia'),
 
     # -------------------------------------------------------------------------------
 
