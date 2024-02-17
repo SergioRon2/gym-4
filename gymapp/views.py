@@ -9,7 +9,7 @@ from django.urls import reverse_lazy, reverse
 from .models import Usuario_gym, Planes_gym, Asistencia, Articulo, RegistroGanancia
 from datetime import datetime
 from .forms import AsistenciaForm, ArticuloForm, PlanesForm
-from django.http import JsonResponse, HttpResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
 from pyzbar.pyzbar import decode
 import pytz
 import cv2
@@ -392,7 +392,7 @@ def consulta_asistencia(request, usuario_id=None):
             presente = False
             mensaje = f"No hay registro de asistencia para {usuario} el {fecha_actual}"
         
-        return JsonResponse({'presente': presente, 'mensaje': mensaje})
+        return JsonResponse({'presente': presente, 'mensaje': mensaje, 'usuario_id': usuario.id, 'nombre_usuario': usuario.nombre})
     else:
         # Si no se proporciona usuario_id, listar todas las asistencias
         fecha_param = request.GET.get('fecha')
@@ -421,10 +421,9 @@ def consulta_asistencia(request, usuario_id=None):
         )
 
         # Convertir queryset a lista de diccionarios para JsonResponse
-        asistencias_lista = list(asistencias.values())
+        asistencias_lista = list(asistencias.values('id', 'fecha', 'presente', 'usuario__id', 'usuario__nombre', 'usuario__id_usuario'))
 
         return JsonResponse({'asistencias': asistencias_lista, 'fechas': list(fechas), 'fecha_seleccionada': fecha_param, 'id_usuario': id_usuario_param})
-
 
 
 
@@ -439,7 +438,7 @@ def crear_asistencia(request):
         try:
             # Buscar usuario por ID
             usuario = Usuario_gym.objects.get(pk=usuario_id)
-            
+
             # Crear la asistencia
             asistencia = Asistencia(usuario=usuario, fecha=fecha, presente=presente)
             asistencia.save()
@@ -456,7 +455,24 @@ def crear_asistencia(request):
         except Usuario_gym.DoesNotExist:
             return JsonResponse({'error': f'No se encontró un usuario con ID {usuario_id}'}, status=404)
 
-    return JsonResponse({'error': 'Se esperaba una solicitud POST'}, status=400)
+    return HttpResponseNotFound('Not Found this id')
+
+
+def eliminar_asistencia(request, asistencia_id):
+    try:
+        # Buscar la asistencia por ID y eliminarla
+        asistencia = Asistencia.objects.get(id=asistencia_id)
+        asistencia.delete()
+        
+        # Devolver una respuesta de éxito
+        return JsonResponse({'success': True, 'message': 'Asistencia eliminada correctamente'})
+    except Asistencia.DoesNotExist:
+        # Si la asistencia no se encuentra, devolver un error
+        return JsonResponse({'success': False, 'message': 'No se encontró la asistencia correspondiente'}, status=404)
+    except Exception as e:
+        # Manejar otros errores y devolver un mensaje genérico de error
+        return JsonResponse({'success': False, 'message': 'Hubo un error al eliminar la asistencia'}, status=500)
+
 
 # ------------------------------------------------------------------
 

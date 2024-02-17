@@ -26,6 +26,8 @@ urlpatterns = [
 
     path('crear-asistencia/', views.crear_asistencia, name='crear_asistencia'),
 
+    path('eliminar-asistencia/<int:asistencia_id>', views.eliminar_asistencia, name='eliminar-asistencia'),
+
     # -------------------------------------------------------------------------------
 
     path('plan-usuario/', views.plan_usuario, name='plan'),
