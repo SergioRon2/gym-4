@@ -217,7 +217,7 @@ def editar_usuario(request, pk):
             return JsonResponse({'success': False, 'mensaje': 'Usuario no encontrado.'}, status=404)
 
         data = json.loads(request.body)
-        tipo_plan = data.get('plan')
+        tipo_plan = data.get('tipo_plan_gym')
 
         if tipo_plan:
             try:
@@ -225,7 +225,7 @@ def editar_usuario(request, pk):
             except Planes_gym.DoesNotExist:
                 return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'}, status=400)
 
-            fecha_inicio_gym_str = data.get('fecha_inicio_gym')
+            fecha_inicio_gym_str = data.get('fecha_inicio_usuario')
 
             if fecha_inicio_gym_str:
                 try:
@@ -247,13 +247,14 @@ def editar_usuario(request, pk):
                 'success': True,
                 'mensaje': 'Usuario actualizado correctamente.',
                 'usuario': {
-                'nombre': usuario.nombre,
-                'apellido': usuario.apellido,
-                'tipo_id': usuario.tipo_id,
-                'id_usuario': usuario.id_usuario,
-                'tipo_plan': plan_instance.tipo_plan,
-                'fecha_inicio_gym': fecha_inicio_gym_str,
-                'fecha_fin': fecha_fin.strftime('%Y-%m-%d'),
+                    'id': usuario.id,
+                    'nombre': usuario.nombre,
+                    'apellido': usuario.apellido,
+                    'tipo_id': usuario.tipo_id,
+                    'id_usuario': usuario.id_usuario,
+                    'tipo_plan': plan_instance.tipo_plan,
+                    'fecha_inicio_gym': fecha_inicio_gym_str,
+                    'fecha_fin': fecha_fin.strftime('%Y-%m-%d'),
                 }
             }
             print("Datos del usuario actualizado:", response_data['usuario'])
