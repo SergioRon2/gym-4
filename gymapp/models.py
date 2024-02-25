@@ -66,8 +66,12 @@ class Usuario_gym(models.Model):
         return f"{self.nombre} {self.apellido}"
 
     def save(self, *args, **kwargs):
-        self.nombre = self.nombre.upper()
-        self.apellido = self.apellido.upper()
+        if isinstance(self.nombre, str):
+            self.nombre = self.nombre.upper()
+        if isinstance(self.apellido, str):
+            self.apellido = self.apellido.upper()
+        super().save(*args, **kwargs)
+
 
         if self.plan and not self.fecha_fin:
             # Calcular la fecha de fin utilizando los días del plan

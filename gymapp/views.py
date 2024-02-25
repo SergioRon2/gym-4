@@ -208,6 +208,7 @@ class EditarUsuario(UpdateView):
     fields = '__all__'
     success_url = reverse_lazy('plan')
 
+
 @api_view(['PUT'])
 def editar_usuario(request, pk):
     if request.method == 'PUT':
@@ -217,59 +218,65 @@ def editar_usuario(request, pk):
             return JsonResponse({'success': False, 'mensaje': 'Usuario no encontrado.'}, status=404)
 
         data = json.loads(request.body)
-        tipo_plan = data.get('tipo_plan_gym')
+        print(data)
 
+        # Actualización del tipo de plan
+        tipo_plan = data.get('tipo_plan')
         if tipo_plan:
             try:
                 plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan)
             except Planes_gym.DoesNotExist:
                 return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'}, status=400)
 
-            fecha_inicio_gym_str = data.get('fecha_inicio_usuario')
-
-            if fecha_inicio_gym_str:
-                try:
-                    fecha_inicio_gym = datetime.strptime(fecha_inicio_gym_str, '%Y-%m-%d').date()
-                except ValueError:
-                    return JsonResponse({'success': False, 'mensaje': 'Fecha de inicio inválida.'}, status=400)
-            else:
-                return JsonResponse({'success': False, 'mensaje': 'Fecha de inicio no especificada.'}, status=400)
-
-            fecha_fin = fecha_inicio_gym + timedelta(days=plan_instance.dias)
-
-            # Actualiza los campos del modelo
-            usuario.fecha_inicio_gym = fecha_inicio_gym
-            usuario.fecha_fin = fecha_fin
             usuario.plan = plan_instance
-            usuario.save()
 
-            response_data = {
-                'success': True,
-                'mensaje': 'Usuario actualizado correctamente.',
-                'usuario': {
-                    'id': usuario.id,
-                    'nombre': usuario.nombre,
-                    'apellido': usuario.apellido,
-                    'tipo_id': usuario.tipo_id,
-                    'id_usuario': usuario.id_usuario,
-                    'tipo_plan': plan_instance.tipo_plan,
-                    'fecha_inicio_gym': fecha_inicio_gym_str,
-                    'fecha_fin': fecha_fin.strftime('%Y-%m-%d'),
-                }
-            }
-            print("Datos del usuario actualizado:", response_data['usuario'])
-            return JsonResponse(response_data)
+        # Actualización de la fecha de inicio
+        fecha_inicio_gym_str = data.get('fecha_inicio_gym')
+        if fecha_inicio_gym_str:
+            try:
+                fecha_inicio_gym = datetime.strptime(fecha_inicio_gym_str, '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({'success': False, 'mensaje': 'Fecha de inicio inválida.'}, status=400)
+            usuario.fecha_inicio_gym = fecha_inicio_gym
 
-        return JsonResponse({'success': False, 'mensaje': 'No se pudo guardar o tipo de plan no especificado.'})
+        # Calcular y actualizar la fecha de finalización
+        if usuario.plan and usuario.fecha_inicio_gym:
+            usuario.fecha_fin = usuario.fecha_inicio_gym + timedelta(days=usuario.plan.dias)
+        else:
+            return JsonResponse({'success': False, 'mensaje': 'No se puede calcular la fecha de finalización.'}, status=400)
 
+        # Actualización de otros campos (nombre, apellido, etc.)
+        usuario.nombre = data.get('nombre', usuario.nombre)
+        usuario.apellido = data.get('apellido', usuario.apellido)
+        usuario.tipo_id = data.get('tipo_id', usuario.tipo_id)
+        usuario.id_usuario = data.get('id_usuario', usuario.id_usuario)
+        # Aquí puedes agregar más campos según tus necesidades
+        
+        print(usuario.fecha_inicio_gym, usuario.plan, usuario.fecha_fin)
 
-    def form_invalid(self, form):
+        # Guardar los cambios en el usuario
+        usuario.save()
+
+        # Preparar la respuesta
         response_data = {
-            'success': False,
-            'mensaje': 'Error al actualizar el usuario.',
-            'errores': form.errors,
+            'success': True,
+            'mensaje': 'Usuario actualizado correctamente.',
+            'usuario': {
+                'id': usuario.id,
+                'nombre': usuario.nombre,
+                'apellido': usuario.apellido,
+                'tipo_id': usuario.tipo_id,
+                'id_usuario': usuario.id_usuario,
+                'tipo_plan': usuario.plan.tipo_plan if usuario.plan else None,
+                'fecha_inicio_gym': usuario.fecha_inicio_gym.strftime('%Y-%m-%d') if usuario.fecha_inicio_gym else None,
+                'fecha_fin': usuario.fecha_fin.strftime('%Y-%m-%d') if usuario.fecha_fin else None,
+            }
         }
+        print("Datos del usuario actualizado:", response_data['usuario'])
         return JsonResponse(response_data)
+
+    return JsonResponse({'success': False, 'mensaje': 'Método no permitido.'})
+
     
 class DetalleUsuario(DetailView):
     model = Usuario_gym

@@ -119,15 +119,19 @@ WSGI_APPLICATION = 'gym.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
     
-    'default': dj_database_url(
-        default= 'postgresql://postgres:postgres@localhost/postgres',
-        conn_max_age=600
-    )
+    # 'default': dj_database_url(
+    #     default= 'postgresql://postgres:postgres@localhost/postgres',
+    #     conn_max_age=600
+    # )  
 }
 
 
-# Password validation
+# Password validation5
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
