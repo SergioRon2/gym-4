@@ -62,7 +62,11 @@ urlpatterns = [
 
     path('articulos/', views.obtener_articulos, name='articulos'),
 
+    path('articulos/<int:id>', views.obtener_articulos, name='articulos'),
+
     path('crear_articulo/', views.crear_articulo, name='crear_articulo'),
+
+    path('actualizar-articulo/<int:id>', views.actualizar_articulo, name='actualizar_articulo'),
 
     path('eliminar_articulo/<int:pk>', views.EliminarArticulo.as_view(), name='eliminar_articulo'), 
 

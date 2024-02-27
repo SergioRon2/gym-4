@@ -28,8 +28,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from django.views.decorators.csrf import csrf_exempt
-
-
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class Logueo(LoginView):
@@ -652,17 +651,31 @@ def plan_usuario(request, usuario_id=None):
 
 
 
-def obtener_articulos(request):
-    articulos = Articulo.objects.all()
+def obtener_articulos(request, id=None):
     if request.method == 'GET':
-        data = [{
-            'id' : articulo.id,
-            'nombre': articulo.nombre,
-            'descripcion': articulo.descripcion, 
-            'precio': float(articulo.precio), 
-            'cantidad_disponible': articulo.cantidad_disponible,
+        if id:  # Si se proporciona un ID en la URL
+            try:
+                articulo = Articulo.objects.get(id=id)
+                data = {
+                    'id': articulo.id,
+                    'nombre': articulo.nombre,
+                    'descripcion': articulo.descripcion, 
+                    'precio': float(articulo.precio), 
+                    'cantidad_disponible': articulo.cantidad_disponible,
+                }
+                return JsonResponse({'articulo': data})
+            except ObjectDoesNotExist:
+                return JsonResponse({'error': 'El artículo no existe'}, status=404)
+        else:
+            articulos = Articulo.objects.all()
+            data = [{
+                'id': articulo.id,
+                'nombre': articulo.nombre,
+                'descripcion': articulo.descripcion, 
+                'precio': float(articulo.precio), 
+                'cantidad_disponible': articulo.cantidad_disponible,
             } for articulo in articulos]
-        return JsonResponse({'articulos': data})
+            return JsonResponse({'articulos': data})
     else:
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
@@ -700,6 +713,38 @@ def crear_articulo(request):
             'message': 'Método no permitido'
         }
         return JsonResponse(data, status=405)
+
+@csrf_exempt
+def actualizar_articulo(request, id):
+    try: 
+        articulo = Articulo.objects.get(id=id)
+    except Articulo.DoesNotExist:
+        return JsonResponse({'error' : 'El articulo no existe'}, status=400)
+
+    if request.method == 'PUT':
+        data = json.loads(request.body)
+        form = ArticuloForm(data, instance=articulo)
+        
+        if form.is_valid():
+            articulo_actualizado = form.save()
+        
+            response_data = {
+                'success': True,
+                'message': 'Articulo actualizado con éxito',
+                'plan_id': articulo_actualizado.id,
+                'nombre': articulo_actualizado.nombre,
+                'descripcion': articulo_actualizado.descripcion,
+                'precio': articulo_actualizado.precio,
+                'cantidad_disponible': articulo_actualizado.cantidad_disponible,
+            }
+        else: 
+            response_data = {
+                'success' : False,
+                'errors' : form.errors,
+            }
+        return JsonResponse(response_data)
+    else:
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 class EliminarArticulo(DeleteView):
     model = Articulo
