@@ -1,4 +1,3 @@
-#!D:\Trabajos\Trabajos laborales\gym-4\gymapp-env\Scripts\python.exe
 from __future__ import print_function
 
 import argparse
