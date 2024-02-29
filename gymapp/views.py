@@ -484,7 +484,6 @@ def eliminar_asistencia(request, asistencia_id):
 # ------------------------------------------------------------------
 
 
-
 def obtener_planes_gym(request):
     planes_gym = Planes_gym.objects.all()
     
@@ -717,33 +716,42 @@ def crear_articulo(request):
 @csrf_exempt
 def actualizar_articulo(request, id):
     try: 
+        # Obtiene el artículo existente por su ID
         articulo = Articulo.objects.get(id=id)
     except Articulo.DoesNotExist:
-        return JsonResponse({'error' : 'El articulo no existe'}, status=400)
+        # Devuelve un error si el artículo no existe
+        return JsonResponse({'error' : 'El artículo no existe'}, status=404)
 
-    if request.method == 'PUT':
+    if request.method == 'PATCH':
+        # Obtiene los datos del cuerpo de la solicitud en formato JSON
         data = json.loads(request.body)
+
+        # Crea un formulario con los datos recibidos y el artículo existente
         form = ArticuloForm(data, instance=articulo)
         
         if form.is_valid():
+            # Guarda la actualización del artículo
             articulo_actualizado = form.save()
         
+            # Devuelve una respuesta JSON con información sobre el artículo actualizado
             response_data = {
                 'success': True,
-                'message': 'Articulo actualizado con éxito',
-                'plan_id': articulo_actualizado.id,
+                'message': 'Artículo actualizado con éxito',
+                'articulo_id': articulo_actualizado.id,
                 'nombre': articulo_actualizado.nombre,
                 'descripcion': articulo_actualizado.descripcion,
                 'precio': articulo_actualizado.precio,
                 'cantidad_disponible': articulo_actualizado.cantidad_disponible,
             }
         else: 
+            # Devuelve una respuesta JSON con errores si el formulario no es válido
             response_data = {
                 'success' : False,
                 'errors' : form.errors,
             }
         return JsonResponse(response_data)
     else:
+        # Devuelve una respuesta JSON indicando que el método no está permitido
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 class EliminarArticulo(DeleteView):
@@ -790,17 +798,17 @@ def registros_ganancia(request):
     if request.method == 'GET':
         registros_ganancia = RegistroGanancia.objects.all()
         data = [{'fecha': registro.fecha.strftime('%Y-%m-%d'),
-                 'ganancia_diaria': float(registro.ganancia_diaria),
-                 'gasto_diario': float(registro.gasto_diario),
-                 'ganancia_mensual': float(registro.ganancia_mensual),
-                 'gasto_mensual': float(registro.gasto_mensual),
-                 'articulos_vendidos': [{'articulo': detalle.articulo.nombre,
-                                         'cantidad_vendida': detalle.cantidad_vendida,
-                                         'precio_unitario': float(detalle.articulo.precio),
-                                         'ganancia_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio),    
-                                         'gasto_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio)}
+                'ganancia_diaria': float(registro.ganancia_diaria),
+                'gasto_diario': float(registro.gasto_diario),
+                'ganancia_mensual': float(registro.ganancia_mensual),
+                'gasto_mensual': float(registro.gasto_mensual),
+                'articulos_vendidos': [{'articulo': detalle.articulo.nombre,
+                                        'cantidad_vendida': detalle.cantidad_vendida,
+                                        'precio_unitario': float(detalle.articulo.precio),
+                                        'ganancia_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio),    
+                                        'gasto_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio)}
                                         for detalle in registro.detalleventa_set.all()]
-                 } for registro in registros_ganancia]
+                } for registro in registros_ganancia]
         return JsonResponse({'registros_ganancia': data})
     elif request.method == 'POST':
         try:
