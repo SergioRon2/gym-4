@@ -70,21 +70,18 @@ class Usuario_gym(models.Model):
             self.nombre = self.nombre.upper()
         if isinstance(self.apellido, str):
             self.apellido = self.apellido.upper()
-        super().save(*args, **kwargs)
-
 
         if self.plan and not self.fecha_fin:
             # Calcular la fecha de fin utilizando los días del plan
             self.fecha_fin = self.fecha_inicio_gym + timedelta(days=self.plan.dias)
 
-        super().save(*args, **kwargs)
-        
-        if self.plan and not self.fecha_fin:
             if self.plan.tipo_plan == 'Anual':  # Utilizar relativedelta solo para el plan anual
                 self.fecha_fin = self.fecha_inicio_gym + relativedelta(years=1)
             else:
                 # Utilizar timedelta para otros tipos de planes
                 self.fecha_fin = self.fecha_inicio_gym + timedelta(days=self.plan.dias)
+
+        super().save(*args, **kwargs)
 
     def dias_restantes(self):
         if self.fecha_fin:
@@ -96,10 +93,17 @@ class Usuario_gym(models.Model):
 class Asistencia(models.Model):
     usuario = models.ForeignKey(Usuario_gym, on_delete=models.CASCADE)
     fecha = models.DateField(default=timezone.now)
+    hora = models.TimeField(default=timezone.now)
     presente = models.BooleanField(default=True)
     def __str__(self):
         return f"Asistencia de {self.usuario} el {self.fecha}"
-
+    
+    def save(self, *args, **kwargs):
+        if not self.hora:
+            hora_actual_utc = timezone.now().strftime('%H:%M:%S')
+            hora_actual_bogota = timezone.datetime.strptime(hora_actual_utc, '%H:%M:%S') - timedelta(hours=5)
+            self.hora = hora_actual_bogota.time()
+        super().save(*args, **kwargs)
 
 
 class Articulo(models.Model):

@@ -178,26 +178,6 @@ def nuevo_usuarioR(request):
 
     return JsonResponse({'success': False, 'mensaje': 'Método no permitido'})
 
-def form_valid(self, form):
-        tipo_plan = form.cleaned_data.get('plan').tipo_plan
-
-        if tipo_plan:
-            try:
-                plan_instance = Planes_gym.objects.get(tipo_plan=tipo_plan)
-            except Planes_gym.DoesNotExist:
-                return JsonResponse({'success': False, 'mensaje': 'Tipo de plan inválido.'})
-
-            # Usar la fecha de inicio del formulario
-            fecha_inicio = form.cleaned_data.get('fecha_inicio_gym')
-
-            # Calcular la fecha de finalización según el tipo de plan y la fecha de inicio
-            fecha_fin = fecha_inicio + timedelta(days=plan_instance.dias)
-
-            # Añadir fecha_fin al formulario
-            form.instance.fecha_fin = fecha_fin
-
-
-        return JsonResponse({'success': False, 'mensaje': 'No se pudo guardar o tipo de plan no especificado.'})
 
 def form_invalid(self, form):
         return JsonResponse({'success': False, 'mensaje': 'Formulario inválido.'})
@@ -428,7 +408,7 @@ def consulta_asistencia(request, usuario_id=None):
         )
 
         # Convertir queryset a lista de diccionarios para JsonResponse
-        asistencias_lista = list(asistencias.values('id', 'fecha', 'presente', 'usuario__id', 'usuario__nombre', 'usuario__id_usuario'))
+        asistencias_lista = list(asistencias.values('id', 'fecha', 'presente', 'hora', 'usuario__id', 'usuario__nombre', 'usuario__id_usuario'))
 
         return JsonResponse({'asistencias': asistencias_lista, 'fechas': list(fechas), 'fecha_seleccionada': fecha_param, 'id_usuario': id_usuario_param})
 
@@ -438,31 +418,33 @@ def consulta_asistencia(request, usuario_id=None):
 def crear_asistencia(request):
     if request.method == 'POST':
         data = json.loads(request.body)
-        usuario_id = data.get('usuario_id')
-        presente = data.get('presente', False)  # Si no se proporciona, se asume False
-        fecha = data.get('fecha')  # Supongamos que recibes la fecha como cadena en formato YYYY-MM-DD
+        nuip = data.get('nuip')  # Cambia 'usuario_id' a 'nuip'
+        presente = data.get('presente', False)  
+        fecha = data.get('fecha')  
+        hora = data.get('hora')
 
         try:
-            # Buscar usuario por ID
-            usuario = Usuario_gym.objects.get(pk=usuario_id)
+            # Buscar usuario por NUIP en lugar de ID primaria
+            usuario = Usuario_gym.objects.get(id_usuario=nuip)
 
             # Crear la asistencia
-            asistencia = Asistencia(usuario=usuario, fecha=fecha, presente=presente)
+            asistencia = Asistencia(usuario=usuario, fecha=fecha, presente=presente, hora=hora)
             asistencia.save()
 
             # Devolver la respuesta con los datos de la asistencia creada
             response_data = {
-                'usuario_id': usuario_id,
+                'usuario_id': usuario.id,  # Puedes seguir devolviendo el ID primario si es necesario
                 'nombre': usuario.nombre,
                 'identificacion': usuario.id_usuario,
                 'fecha': fecha,
+                'hora' : hora,
                 'mensaje': 'Asistencia creada correctamente'
             }
             return JsonResponse(response_data, status=201)
         except Usuario_gym.DoesNotExist:
-            return JsonResponse({'error': f'No se encontró un usuario con ID {usuario_id}'}, status=404)
+            return JsonResponse({'error': f'No se encontró un usuario con NUIP {nuip}'}, status=404)
 
-    return HttpResponseNotFound('Not Found this id')
+    return HttpResponseNotFound('Not Found this NUIP')
 
 
 def eliminar_asistencia(request, asistencia_id):
