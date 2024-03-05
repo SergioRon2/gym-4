@@ -86,7 +86,8 @@ def usuario(request, id=None):
             'nombre': usuario.nombre,
             'apellido': usuario.apellido,
             'tipo_id': usuario.tipo_id,
-            'id_usuario': usuario.id_usuario
+            'id_usuario': usuario.id_usuario,
+            'codigo_qr_url': usuario.codigo_qr.url if usuario.codigo_qr else None
         }
         return JsonResponse({'usuario': usuario_dict})
     else:
@@ -98,11 +99,14 @@ def usuario(request, id=None):
                 'nombre': usuario.nombre,
                 'apellido': usuario.apellido,
                 'tipo_id': usuario.tipo_id,
-                'id_usuario': usuario.id_usuario
+                'id_usuario': usuario.id_usuario,
+                'codigo_qr_url': usuario.codigo_qr.url if usuario.codigo_qr else None
             }
             for usuario in usuarios
         ]
         return JsonResponse({'usuarios': usuarios_lista})
+
+
 
 def obtener_tipos_identificaciones(request):
     
@@ -278,6 +282,7 @@ class DetalleUsuario(DetailView):
             'id_usuario': self.object.id_usuario,
             'fecha_inicio_gym': self.object.fecha_inicio_gym,
             'fecha_fin' : self.object.fecha_fin,
+            'codigo_qr_url': self.object.codigo_qr.url if self.object.codigo_qr else None,
             'tipo_plan': plan.tipo_plan,
             'precio': plan.precio,
             'dias_restantes': dias_restantes,
@@ -312,22 +317,17 @@ class EliminarUsuario(DeleteView):
 # @login_required(login_url='login')
 @csrf_exempt
 def lector(request):
-
     if request.method == 'POST' and request.FILES['imagen']:
         imagen = request.FILES['imagen']
-
         # Haz lo que necesites con la imagen, por ejemplo, guardarla en el servidor.
-
         qr_data = decode(cv2.imdecode(np.frombuffer(imagen.read(), np.uint8), -1))
-
         if qr_data:
             # Si se encontró un código QR en la imagen
             codigo_qr = qr_data[0].data.decode('utf-8')
             print(f'Imagen recibida y procesada correctamente. Código QR: {codigo_qr}')
             # Ruta a la carpeta media
             current_directory = os.path.dirname(os.path.abspath(__file__))
-            ruta_carpeta_media = os.path.join(current_directory, '../media/gymapp') 
-
+            ruta_carpeta_media = os.path.join(current_directory, '../media') 
             usuario = Usuario_gym.objects.filter(id_usuario=codigo_qr).first()
             nombre_usuario = usuario.nombre  # Obtén el nombre del usuario
             apellido_usuario = usuario.apellido  # Obtén el apellido del usuario si es necesario
@@ -348,19 +348,15 @@ def lector(request):
                         'name':full_name,
                         # Nombre de la URL a la que deseas redirigir al usuario
                         }
-
                     # Devuelve los datos como JSON
                     return JsonResponse(response_data)
                     # return JsonResponse({'success': True, 'mensaje': mensaje})
-
             mensaje = 'No se encontró un archivo coincidente en la carpeta media.'
             return JsonResponse({'success': False, 'mensaje': mensaje})
-
         else:
             # Si no se encontró un código QR en la imagen
             print('No se encontró un código QR en la imagen.')
             return JsonResponse({'success': False, 'mensaje': 'No se encontró un código QR en la imagen.'})
-
 
 
 # ---------------------------------------------------------------------------------------------

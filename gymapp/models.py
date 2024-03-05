@@ -1,6 +1,8 @@
 import datetime
 from datetime import datetime
+import os
 from django.db import models
+from django.http import HttpResponse
 import qrcode
 from django.core.files import File
 from datetime import timedelta
@@ -11,6 +13,10 @@ from django.dispatch import receiver
 from dateutil.relativedelta import relativedelta
 from datetime import timedelta
 from django.utils import timezone
+from django.db.models.signals import pre_delete, pre_save
+from django.dispatch import receiver
+from django.utils.encoding import smart_str
+
 
 
 
@@ -70,7 +76,7 @@ class Usuario_gym(models.Model):
             self.nombre = self.nombre.upper()
         if isinstance(self.apellido, str):
             self.apellido = self.apellido.upper()
-
+            
         if self.plan and not self.fecha_fin:
             # Calcular la fecha de fin utilizando los días del plan
             self.fecha_fin = self.fecha_inicio_gym + timedelta(days=self.plan.dias)
@@ -80,14 +86,45 @@ class Usuario_gym(models.Model):
             else:
                 # Utilizar timedelta para otros tipos de planes
                 self.fecha_fin = self.fecha_inicio_gym + timedelta(days=self.plan.dias)
+                
+        qr_img_path = generar_codigo_qr(self.id_usuario)
+        with open(qr_img_path, 'rb') as temp_file:
+            self.codigo_qr.save(f"{self.nombre} {self.id_usuario}.png",File(temp_file), save=False)
 
         super().save(*args, **kwargs)
+
+    # este codigo hace que se elimine el qr si se elimina el usuario, si funciona
+    @receiver(pre_delete)
+    def eliminar_codigo_qr(sender, instance, **kwargs):
+    # Eliminar el archivo del código QR asociado al usuario
+        if instance.codigo_qr:
+            if os.path.isfile(instance.codigo_qr.path):
+                os.remove(instance.codigo_qr.path)
+
 
     def dias_restantes(self):
         if self.fecha_fin:
             dias_restantes = (self.fecha_fin - timezone.now().date()).days
             return dias_restantes if dias_restantes >= 0 else 0
         return 0
+
+    def descargar_qr(request, user_id, user_name):
+        # Lógica para generar el código QR y obtener la ruta del archivo
+        # En este ejemplo, supongamos que ya tienes la ruta del archivo almacenada en la variable qr_file_path
+        # Aquí deberías adaptar esta lógica según cómo estés generando y almacenando los códigos QR
+        qr_file_path = f'media/gymapp/{user_name}{user_id}.png'
+
+        # Abre el archivo y lee su contenido binario
+        with open(qr_file_path, 'rb') as qr_file:
+            # Lee el contenido binario del archivo
+            qr_data = qr_file.read()
+
+        # Preparar la respuesta HTTP con el contenido binario del archivo
+        response = HttpResponse(qr_data, content_type='image/png')
+        # Forzar la descarga del archivo en lugar de mostrarlo en el navegador
+        response['Content-Disposition'] = f'attachment; filename="{smart_str(user_id)}.png"'
+
+        return response
 
 
 class Asistencia(models.Model):
