@@ -29,6 +29,7 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
+from django.conf import settings
 
 
 class Logueo(LoginView):
@@ -317,46 +318,46 @@ class EliminarUsuario(DeleteView):
 # @login_required(login_url='login')
 @csrf_exempt
 def lector(request):
-    if request.method == 'POST' and request.FILES['imagen']:
+    if request.method == 'POST' and 'imagen' in request.FILES:
         imagen = request.FILES['imagen']
-        # Haz lo que necesites con la imagen, por ejemplo, guardarla en el servidor.
         qr_data = decode(cv2.imdecode(np.frombuffer(imagen.read(), np.uint8), -1))
         if qr_data:
             # Si se encontró un código QR en la imagen
             codigo_qr = qr_data[0].data.decode('utf-8')
             print(f'Imagen recibida y procesada correctamente. Código QR: {codigo_qr}')
-            # Ruta a la carpeta media
-            current_directory = os.path.dirname(os.path.abspath(__file__))
-            ruta_carpeta_media = os.path.join(current_directory, '../media') 
+            ruta_carpeta_media = os.path.join(settings.BASE_DIR, 'media', 'gymapp')
             usuario = Usuario_gym.objects.filter(id_usuario=codigo_qr).first()
-            nombre_usuario = usuario.nombre  # Obtén el nombre del usuario
-            apellido_usuario = usuario.apellido  # Obtén el apellido del usuario si es necesario
-            full_name = nombre_usuario + ' ' + apellido_usuario
-            # Iterar a través de los archivos en la carpeta media
-            for nombre_archivo in os.listdir(ruta_carpeta_media):
-                ruta_completa_archivo = os.path.join(ruta_carpeta_media, nombre_archivo)
-                numero_archivo = decode(cv2.imread(ruta_completa_archivo))
-                if numero_archivo and numero_archivo[0].data.decode('utf-8') == codigo_qr:
-                    # El número decodificado del archivo coincide con el número del código QR
-                    print(f"Se encontró un archivo coincidente: {ruta_completa_archivo}")
-                    # Realiza las operaciones adicionales que necesites con el archivo encontrado
-                    # mensaje = f'Imagen recibida y procesada correctamente. Código QR: {codigo_qr}'
+            if usuario:
+                nombre_usuario = usuario.nombre
+                apellido_usuario = usuario.apellido
+                full_name = f'{nombre_usuario} {apellido_usuario}'
+                # Registrar la asistencia
+                fecha_actual = datetime.now().date()
+                hora_actual = datetime.now().time().strftime('%H:%M:%S')
+                try:
+                    asistencia = Asistencia(usuario=usuario, fecha=fecha_actual, hora=hora_actual)
+                    asistencia.save()
                     response_data = {
-                        'success': True,  # Puedes cambiar esto a False si hay algún error
-                        'mensaje': 'Imagen procesada correctamente.',  # Tu mensaje de éxito o error
+                        'success': True,
+                        'mensaje': 'Asistencia registrada correctamente.',
                         'codigo': codigo_qr,
-                        'name':full_name,
-                        # Nombre de la URL a la que deseas redirigir al usuario
-                        }
-                    # Devuelve los datos como JSON
+                        'name': full_name,
+                    }
                     return JsonResponse(response_data)
-                    # return JsonResponse({'success': True, 'mensaje': mensaje})
-            mensaje = 'No se encontró un archivo coincidente en la carpeta media.'
-            return JsonResponse({'success': False, 'mensaje': mensaje})
+                except Exception as e:
+                    mensaje = f'Error al registrar la asistencia: {str(e)}'
+                    return JsonResponse({'success': False, 'mensaje': mensaje})
+            else:
+                mensaje = f'No se encontró un usuario con el código QR: {codigo_qr}'
+                return JsonResponse({'success': False, 'mensaje': mensaje})
         else:
             # Si no se encontró un código QR en la imagen
             print('No se encontró un código QR en la imagen.')
             return JsonResponse({'success': False, 'mensaje': 'No se encontró un código QR en la imagen.'})
+    else:
+        # Si la solicitud no es POST o no se proporcionó ninguna imagen
+        mensaje = 'No se proporcionó una imagen en la solicitud POST.'
+        return JsonResponse({'success': False, 'mensaje': mensaje})
 
 
 # ---------------------------------------------------------------------------------------------
@@ -414,7 +415,7 @@ def consulta_asistencia(request, usuario_id=None):
 def crear_asistencia(request):
     if request.method == 'POST':
         data = json.loads(request.body)
-        nuip = data.get('nuip')  # Cambia 'usuario_id' a 'nuip'
+        nuip = data.get('nuip')
         presente = data.get('presente', False)  
         fecha = data.get('fecha')  
         hora = data.get('hora')
@@ -443,6 +444,7 @@ def crear_asistencia(request):
     return HttpResponseNotFound('Not Found this NUIP')
 
 
+@csrf_exempt
 def eliminar_asistencia(request, asistencia_id):
     try:
         # Buscar la asistencia por ID y eliminarla
@@ -456,6 +458,7 @@ def eliminar_asistencia(request, asistencia_id):
         return JsonResponse({'success': False, 'message': 'No se encontró la asistencia correspondiente'}, status=404)
     except Exception as e:
         # Manejar otros errores y devolver un mensaje genérico de error
+        print(e)
         return JsonResponse({'success': False, 'message': 'Hubo un error al eliminar la asistencia'}, status=500)
 
 

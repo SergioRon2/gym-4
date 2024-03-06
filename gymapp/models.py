@@ -132,6 +132,7 @@ class Asistencia(models.Model):
     fecha = models.DateField(default=timezone.now)
     hora = models.TimeField(default=timezone.now)
     presente = models.BooleanField(default=True)
+
     def __str__(self):
         return f"Asistencia de {self.usuario} el {self.fecha}"
     
