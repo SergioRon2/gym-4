@@ -68,7 +68,7 @@ urlpatterns = [
 
     path('actualizar-articulo/<int:id>', views.actualizar_articulo, name='actualizar_articulo'),
 
-    path('eliminar_articulo/<int:pk>', views.EliminarArticulo.as_view(), name='eliminar_articulo'), 
+    path('eliminar_articulo/<int:pk>', views.EliminarArticulo.as_view(), name='eliminar_articulo'),
 
     path('detalle_articulo/<int:pk>', views.DetalleArticulo.as_view(), name='detalle_articulo'),
 

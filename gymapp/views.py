@@ -458,8 +458,7 @@ def eliminar_asistencia(request, asistencia_id):
         return JsonResponse({'success': False, 'message': 'No se encontró la asistencia correspondiente'}, status=404)
     except Exception as e:
         # Manejar otros errores y devolver un mensaje genérico de error
-        print(e)
-        return JsonResponse({'success': False, 'message': 'Hubo un error al eliminar la asistencia'}, status=500)
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
 # ------------------------------------------------------------------
