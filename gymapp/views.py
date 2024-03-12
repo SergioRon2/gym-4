@@ -6,7 +6,7 @@ from django.contrib.auth.views import LoginView
 from django.forms.models import model_to_dict
 import numpy as np
 from django.urls import reverse_lazy, reverse
-from .models import Usuario_gym, Planes_gym, Asistencia, Articulo, RegistroGanancia
+from .models import DetalleVenta, Usuario_gym, Planes_gym, Asistencia, Articulo, RegistroGanancia
 from datetime import datetime
 from .forms import AsistenciaForm, ArticuloForm, PlanesForm
 from django.http import JsonResponse, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
@@ -30,6 +30,7 @@ from rest_framework.decorators import api_view
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
+from decimal import Decimal
 
 
 class Logueo(LoginView):
@@ -661,14 +662,8 @@ def obtener_articulos(request, id=None):
 
 def crear_articulo(request):
     if request.method == 'POST':
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-        except json.JSONDecodeError:
-            data = {
-                'success': False,
-                'message': 'Error al decodificar los datos JSON.'
-            }
-            return JsonResponse(data, status=400)
+
+        data = json.loads(request.body)
 
         form = ArticuloForm(data)
         if form.is_valid():
@@ -782,6 +777,7 @@ def registros_ganancia(request):
                 'gasto_diario': float(registro.gasto_diario),
                 'ganancia_mensual': float(registro.ganancia_mensual),
                 'gasto_mensual': float(registro.gasto_mensual),
+                'total_mensual': float(registro.total_mensual),
                 'articulos_vendidos': [{'articulo': detalle.articulo.nombre,
                                         'cantidad_vendida': detalle.cantidad_vendida,
                                         'precio_unitario': float(detalle.articulo.precio),
@@ -790,6 +786,8 @@ def registros_ganancia(request):
                                         for detalle in registro.detalleventa_set.all()]
                 } for registro in registros_ganancia]
         return JsonResponse({'registros_ganancia': data})
+
+
     elif request.method == 'POST':
         try:
             data = json.loads(request.body.decode('utf-8'))
@@ -797,12 +795,17 @@ def registros_ganancia(request):
             data = {'success': False, 'message': 'Error al decodificar los datos JSON.'}
             return JsonResponse(data, status=400)
 
-        fecha_actual = data.get('fecha')
+        fecha_actual = data.get('fecha', timezone.now().date() - 1)        
         registro, created = RegistroGanancia.objects.get_or_create(fecha=fecha_actual)
 
         # Actualizar los valores de ganancia y gasto diario
-        registro.ganancia_diaria += data.get('ganancia_diaria', 0)
-        registro.gasto_diario += data.get('gasto_diario', 0)
+        ganancia_diaria = Decimal(data.get('ganancia_diaria', 0))
+        gasto_diario = Decimal(data.get('gasto_diario', 0))
+        
+        
+        registro.ganancia_diaria += ganancia_diaria
+        registro.gasto_diario += gasto_diario
+        
         registro.save()
 
         # Actualizar los detalles de venta
@@ -813,15 +816,16 @@ def registros_ganancia(request):
 
             articulo = Articulo.objects.get(pk=articulo_id)
 
-            detalle.venta.objects.create(registro_ganancia=registro, articulo=articulo, cantidad_vendida=cantidad_vendida)
+            DetalleVenta.objects.create(registro_ganancia=registro, articulo=articulo, cantidad_vendida=cantidad_vendida)
 
         # Calcular ganancia y gasto mensual
         registro.calcular_ganancia_mensual()
-        registro.calcular_gasto_diario()
+        registro.calcular_gasto_mensual()
 
         data = {'success': True, 'message': 'Registro de ganancia y gasto creado o actualizado correctamente.'}
         return JsonResponse(data)
 
     else:
         data = {'success': False, 'message': 'Método no permitido'}
-        return JsonResponse(data, status=405)
+        return JsonResponse(data, status=405) 
+

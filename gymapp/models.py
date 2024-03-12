@@ -9,6 +9,7 @@ from datetime import timedelta
 from django.utils import timezone
 import tempfile 
 from django.db.models.signals import post_save, post_delete
+from django.db.models import Sum
 from django.dispatch import receiver
 from dateutil.relativedelta import relativedelta
 from datetime import timedelta
@@ -160,37 +161,30 @@ class RegistroGanancia(models.Model):
     gasto_diario = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     ganancia_mensual = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     gasto_mensual = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    articulos_vendidos = models.ManyToManyField(Articulo, through='DetalleVenta')
+    total_mensual = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
         return f"Registro de Ganancia - {self.fecha}"
 
     def calcular_ganancia_mensual(self):
-        # Calcular la ganancia mensual sumando todas las ganancias diarias del mes actual
         mes_actual = self.fecha.month
         año_actual = self.fecha.year
-
-        ganancias_diarias_del_mes = RegistroGanancia.objects.filter(
-            fecha__month=mes_actual,
-            fecha__year=año_actual
-        )
-
-        total_ganancia_mensual = sum(registro.ganancia_diaria for registro in ganancias_diarias_del_mes)
+        registros_del_mes = RegistroGanancia.objects.filter(fecha__month=mes_actual, fecha__year=año_actual)
+        total_ganancia_mensual = registros_del_mes.aggregate(Sum('ganancia_diaria'))['ganancia_diaria__sum'] or 0
         self.ganancia_mensual = total_ganancia_mensual
         self.save()
 
-    def calcular_gasto_diario(self):
-        # Calcular el gasto diario sumando todos los gastos diarios del mes actual
+    def calcular_gasto_mensual(self):
         mes_actual = self.fecha.month
         año_actual = self.fecha.year
+        registros_del_mes = RegistroGanancia.objects.filter(fecha__month=mes_actual, fecha__year=año_actual)
+        total_gasto_mensual = registros_del_mes.aggregate(Sum('gasto_diario'))['gasto_diario__sum'] or 0
+        self.gasto_mensual = total_gasto_mensual
+        self.save()
 
-        gastos_diarios_del_mes = RegistroGanancia.objects.filter(
-            fecha__month=mes_actual,
-            fecha__year=año_actual
-        )
-
-        total_gasto_diario = sum(registro.gasto_diario for registro in gastos_diarios_del_mes)
-        self.gasto_diario = total_gasto_diario
+    def calcular_total_mensual(self):
+        calculo_mes = self.ganancia_mensual - self.gasto_mensual
+        self.total_mensual = calculo_mes
         self.save()
 
 
