@@ -795,7 +795,7 @@ def registros_ganancia(request):
             data = {'success': False, 'message': 'Error al decodificar los datos JSON.'}
             return JsonResponse(data, status=400)
 
-        fecha_actual = data.get('fecha', timezone.now().date() - 1)        
+        fecha_actual = data.get('fecha', timezone.now().date())        
         registro, created = RegistroGanancia.objects.get_or_create(fecha=fecha_actual)
 
         # Actualizar los valores de ganancia y gasto diario
@@ -805,7 +805,6 @@ def registros_ganancia(request):
         
         registro.ganancia_diaria += ganancia_diaria
         registro.gasto_diario += gasto_diario
-        
         registro.save()
 
         # Actualizar los detalles de venta

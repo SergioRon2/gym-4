@@ -171,7 +171,7 @@ class RegistroGanancia(models.Model):
         año_actual = self.fecha.year
         registros_del_mes = RegistroGanancia.objects.filter(fecha__month=mes_actual, fecha__year=año_actual)
         total_ganancia_mensual = registros_del_mes.aggregate(Sum('ganancia_diaria'))['ganancia_diaria__sum'] or 0
-        self.ganancia_mensual = total_ganancia_mensual
+        self.ganancia_mensual += total_ganancia_mensual  # Acumulamos la ganancia mensual
         self.save()
 
     def calcular_gasto_mensual(self):
@@ -179,7 +179,7 @@ class RegistroGanancia(models.Model):
         año_actual = self.fecha.year
         registros_del_mes = RegistroGanancia.objects.filter(fecha__month=mes_actual, fecha__year=año_actual)
         total_gasto_mensual = registros_del_mes.aggregate(Sum('gasto_diario'))['gasto_diario__sum'] or 0
-        self.gasto_mensual = total_gasto_mensual
+        self.gasto_mensual += total_gasto_mensual  # Acumulamos el gasto mensual
         self.save()
 
     def calcular_total_mensual(self):
