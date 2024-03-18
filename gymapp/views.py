@@ -9,21 +9,16 @@ from django.urls import reverse_lazy, reverse
 from .models import DetalleVenta, Usuario_gym, Planes_gym, Asistencia, Articulo, RegistroGanancia
 from datetime import datetime
 from .forms import AsistenciaForm, ArticuloForm, PlanesForm
-from django.http import JsonResponse, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound
 from pyzbar.pyzbar import decode
 import pytz
 import cv2
-import qrcode
-from django.core.files.storage import default_storage
-from dateutil import parser
 from django.db.models import DateField
 from django.db.models.functions import Trunc
-from django.db.models import Sum
 from django.middleware.csrf import get_token
 import json
 from django.utils import timezone
 from datetime import timedelta
-from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view

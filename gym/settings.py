@@ -42,11 +42,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders',
-    "crispy_forms",
-    "crispy_bootstrap5",
-    'widget_tweaks',
-    'bootstrap_datepicker_plus',
+    # 'corsheaders',
+    # "crispy_forms",
+    # "crispy_bootstrap5",
+    # 'widget_tweaks',
+    # 'bootstrap_datepicker_plus',
     'gymapp',
     'rest_framework',
 ]
@@ -69,6 +69,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
     "http://localhost:3001",
+    "https://gym-frontend-drab.vercel.app/",
 #    "http://127.0.0.1:8000",
 #    "http://192.168.101.70:8000",
 #    "http://192.168.101.71:8000",
@@ -82,7 +83,7 @@ CORS_ALLOWED_ORIGINS = [
 # settings.py
 
 CORS_ALLOW_METHODS = [
-    'DELETE',  
+    'DELETE',
     'GET',
     'OPTIONS',
     'PATCH',
@@ -91,7 +92,7 @@ CORS_ALLOW_METHODS = [
 ]
 
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
 
 
 ROOT_URLCONF = 'gym.urls'
@@ -123,11 +124,11 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
-    
+
     # 'default': dj_database_url(
     #     default= 'postgresql://postgres:postgres@localhost/postgres',
     #     conn_max_age=600
-    # )  
+    # )
 }
 
 

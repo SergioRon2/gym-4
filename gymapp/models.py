@@ -1,24 +1,16 @@
-import datetime
-from datetime import datetime
 import os
 from django.db import models
 from django.http import HttpResponse
 import qrcode
 from django.core.files import File
-from datetime import timedelta
-from django.utils import timezone
-import tempfile 
-from django.db.models.signals import post_save, post_delete
+import tempfile
 from django.db.models import Sum
-from django.dispatch import receiver
 from dateutil.relativedelta import relativedelta
 from datetime import timedelta
 from django.utils import timezone
-from django.db.models.signals import pre_delete, pre_save
+from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 from django.utils.encoding import smart_str
-
-
 
 
 # Create your models here.
@@ -50,8 +42,8 @@ class Planes_gym(models.Model):
     def __str__(self):
         return self.tipo_plan
 
+
 class Usuario_gym(models.Model):
-    
     tipos_id_choice=[
         ('Cédula de Ciudadanía','Cédula de Ciudadanía'),
         ('Tarjeta de Identidad', 'Tarjeta de Identidad'),
