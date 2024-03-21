@@ -86,15 +86,6 @@ class Usuario_gym(models.Model):
 
         super().save(*args, **kwargs)
 
-    # este codigo hace que se elimine el qr si se elimina el usuario, si funciona
-    @receiver(pre_delete)
-    def eliminar_codigo_qr(sender, instance, **kwargs):
-    # Eliminar el archivo del código QR asociado al usuario
-        if instance.codigo_qr:
-            if os.path.isfile(instance.codigo_qr.path):
-                os.remove(instance.codigo_qr.path)
-
-
     def dias_restantes(self):
         if self.fecha_fin:
             dias_restantes = (self.fecha_fin - timezone.now().date()).days
@@ -119,6 +110,13 @@ class Usuario_gym(models.Model):
 
         return response
 
+# eliminacion del codigo qr, va enlazado con el modelo usuario_gym
+@receiver(pre_delete, sender=Usuario_gym)
+def eliminar_codigo_qr(sender, instance, **kwargs):
+    # Lógica para eliminar el código QR asociado al Usuario_gym
+    if instance.codigo_qr:
+        if os.path.isfile(instance.codigo_qr.path):
+            os.remove(instance.codigo_qr.path)
 
 class Asistencia(models.Model):
     usuario = models.ForeignKey(Usuario_gym, on_delete=models.CASCADE)
@@ -161,23 +159,23 @@ class RegistroGanancia(models.Model):
     def calcular_ganancia_mensual(self):
         mes_actual = self.fecha.month
         año_actual = self.fecha.year
-        registros_del_mes = RegistroGanancia.objects.filter(fecha__month=mes_actual, fecha__year=año_actual)
-        total_ganancia_mensual = registros_del_mes.aggregate(Sum('ganancia_diaria'))['ganancia_diaria__sum'] or 0
-        self.ganancia_mensual += total_ganancia_mensual  # Acumulamos la ganancia mensual
-        self.save()
+        total_ganancia_mensual = RegistroGanancia.objects.filter(fecha__month=mes_actual, fecha__year=año_actual).aggregate(Sum('ganancia_diaria'))['ganancia_diaria__sum'] or 0
+        return total_ganancia_mensual
 
     def calcular_gasto_mensual(self):
         mes_actual = self.fecha.month
         año_actual = self.fecha.year
-        registros_del_mes = RegistroGanancia.objects.filter(fecha__month=mes_actual, fecha__year=año_actual)
-        total_gasto_mensual = registros_del_mes.aggregate(Sum('gasto_diario'))['gasto_diario__sum'] or 0
-        self.gasto_mensual += total_gasto_mensual  # Acumulamos el gasto mensual
-        self.save()
+        total_gasto_mensual = RegistroGanancia.objects.filter(fecha__month=mes_actual, fecha__year=año_actual).aggregate(Sum('gasto_diario'))['gasto_diario__sum'] or 0
+        return total_gasto_mensual
 
     def calcular_total_mensual(self):
-        calculo_mes = self.ganancia_mensual - self.gasto_mensual
-        self.total_mensual = calculo_mes
-        self.save()
+        self.ganancia_mensual = self.calcular_ganancia_mensual()
+        self.gasto_mensual = self.calcular_gasto_mensual()
+        self.total_mensual = self.ganancia_mensual - self.gasto_mensual
+
+    def save(self, *args, **kwargs):
+        self.calcular_total_mensual()
+        super().save(*args, **kwargs)
 
 
 class DetalleVenta(models.Model):

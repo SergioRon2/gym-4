@@ -724,26 +724,32 @@ def actualizar_articulo(request, id):
         # Devuelve una respuesta JSON indicando que el método no está permitido
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-class EliminarArticulo(DeleteView):
-    model = Articulo
-    success_url = reverse_lazy('plan')
+from django.http import JsonResponse
+from .models import Articulo
 
-    def delete(self, request, *args, **kwargs):
+def eliminar_articulo(request, pk):
+    if request.method == 'DELETE':
         try:
-            # Obtén la instancia del usuario que se va a eliminar
-            self.object = self.get_object()
+            # Obtén la instancia del artículo que se va a eliminar
+            articulo = Articulo.objects.get(pk=pk)
 
             # Puedes agregar lógica adicional antes de eliminar el objeto si es necesario
             # Por ejemplo, verificar si el usuario tiene permisos para eliminar el objeto, etc.
 
-            # Elimina el usuario
-            self.object.delete()
+            # Elimina el artículo
+            articulo.delete()
 
-            # Devuelve una respuesta JSON indicando que el usuario se eliminó correctamente
-            return JsonResponse({'success': True, 'mensaje': 'Articulo eliminado correctamente.'})
+            # Devuelve una respuesta JSON indicando que el artículo se eliminó correctamente
+            return JsonResponse({'success': True, 'mensaje': 'Artículo eliminado correctamente.'})
+        except Articulo.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'El artículo no existe.'})
         except Exception as e:
             # Devuelve una respuesta JSON indicando un error si la eliminación falla
             return JsonResponse({'success': False, 'error': str(e)})
+    else:
+        # Si el método de solicitud HTTP no es POST, devuelve un error
+        return JsonResponse({'success': False, 'error': 'Método no permitido.'}, status=405)
+
 
 class DetalleArticulo(DetailView):
     model = Articulo
@@ -796,6 +802,7 @@ def registros_ganancia(request):
         # Actualizar los valores de ganancia y gasto diario
         ganancia_diaria = Decimal(data.get('ganancia_diaria', 0))
         gasto_diario = Decimal(data.get('gasto_diario', 0))
+
         
         
         registro.ganancia_diaria += ganancia_diaria
