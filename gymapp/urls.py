@@ -77,4 +77,6 @@ urlpatterns = [
 
     path('obtener-csrf-token/', obtener_csrf_token, name='obtener_csrf_token'),
 
+    path('cantidad-planes-vendidos-por-mes/', views.obtener_cantidad_planes_vendidos_por_mes, name='cantidad_planes_vendidos_por_mes'),
+
 ]

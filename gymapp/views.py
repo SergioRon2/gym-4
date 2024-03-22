@@ -13,7 +13,7 @@ from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFou
 from pyzbar.pyzbar import decode
 import pytz
 import cv2
-from django.db.models import DateField
+from django.db.models import DateField, Count
 from django.db.models.functions import Trunc
 from django.middleware.csrf import get_token
 import json
@@ -295,19 +295,10 @@ class EliminarUsuario(DeleteView):
 
     def delete(self, request, *args, **kwargs):
         try:
-            # Obtén la instancia del usuario que se va a eliminar
             self.object = self.get_object()
-
-            # Puedes agregar lógica adicional antes de eliminar el objeto si es necesario
-            # Por ejemplo, verificar si el usuario tiene permisos para eliminar el objeto, etc.
-
-            # Elimina el usuario
             self.object.delete()
-
-            # Devuelve una respuesta JSON indicando que el usuario se eliminó correctamente
             return JsonResponse({'success': True, 'mensaje': 'Usuario eliminado correctamente.'})
         except Exception as e:
-            # Devuelve una respuesta JSON indicando un error si la eliminación falla
             return JsonResponse({'success': False, 'error': str(e)})
 
 
@@ -778,13 +769,7 @@ def registros_ganancia(request):
                 'gasto_diario': float(registro.gasto_diario),
                 'ganancia_mensual': float(registro.ganancia_mensual),
                 'gasto_mensual': float(registro.gasto_mensual),
-                'total_mensual': float(registro.total_mensual),
-                'articulos_vendidos': [{'articulo': detalle.articulo.nombre,
-                                        'cantidad_vendida': detalle.cantidad_vendida,
-                                        'precio_unitario': float(detalle.articulo.precio),
-                                        'ganancia_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio),    
-                                        'gasto_articulo': float(detalle.cantidad_vendida * detalle.articulo.precio)}
-                                        for detalle in registro.detalleventa_set.all()]
+                'total_mensual': float(registro.total_mensual)
                 } for registro in registros_ganancia]
         return JsonResponse({'registros_ganancia': data})
 
@@ -796,17 +781,24 @@ def registros_ganancia(request):
             data = {'success': False, 'message': 'Error al decodificar los datos JSON.'}
             return JsonResponse(data, status=400)
 
-        fecha_actual = data.get('fecha', timezone.now().date())        
+        fecha_actual = data.get('fecha', timezone.now().date())
+
+        # Verificar si ya existe un registro para la fecha actual
         registro, created = RegistroGanancia.objects.get_or_create(fecha=fecha_actual)
 
         # Actualizar los valores de ganancia y gasto diario
         ganancia_diaria = Decimal(data.get('ganancia_diaria', 0))
         gasto_diario = Decimal(data.get('gasto_diario', 0))
 
-        
-        
-        registro.ganancia_diaria += ganancia_diaria
-        registro.gasto_diario += gasto_diario
+        if not created:
+            # Si el registro ya existe, sumar los valores a los existentes
+            registro.ganancia_diaria += ganancia_diaria
+            registro.gasto_diario += gasto_diario
+        else:
+            # Si es un nuevo registro, establecer los valores proporcionados
+            registro.ganancia_diaria = ganancia_diaria
+            registro.gasto_diario = gasto_diario
+
         registro.save()
 
         # Actualizar los detalles de venta
@@ -819,10 +811,6 @@ def registros_ganancia(request):
 
             DetalleVenta.objects.create(registro_ganancia=registro, articulo=articulo, cantidad_vendida=cantidad_vendida)
 
-        # Calcular ganancia y gasto mensual
-        registro.calcular_ganancia_mensual()
-        registro.calcular_gasto_mensual()
-
         data = {'success': True, 'message': 'Registro de ganancia y gasto creado o actualizado correctamente.'}
         return JsonResponse(data)
 
@@ -830,3 +818,19 @@ def registros_ganancia(request):
         data = {'success': False, 'message': 'Método no permitido'}
         return JsonResponse(data, status=405) 
 
+
+def obtener_cantidad_planes_vendidos_por_mes(request):
+    try:
+        # Obtener la cantidad de cada plan vendido por mes
+        cantidad_planes_vendidos = Usuario_gym.objects.filter(fecha_inicio_gym__month=timezone.now().month).values('plan__tipo_plan').annotate(cantidad=Count('plan__tipo_plan'))
+
+        # Formatear los datos para enviarlos como respuesta JSON
+        data = [{
+            'mes': timezone.now().strftime('%B'),  # Obtener el nombre del mes actual
+            'plan': registro['plan__tipo_plan'],
+            'cantidad': registro['cantidad']
+        } for registro in cantidad_planes_vendidos]
+
+        return JsonResponse({'cantidad_planes_vendidos': data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

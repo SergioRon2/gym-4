@@ -1,3 +1,5 @@
+from datetime import datetime
+from decimal import Decimal
 import os
 from django.db import models
 from django.http import HttpResponse
@@ -8,7 +10,7 @@ from django.db.models import Sum
 from dateutil.relativedelta import relativedelta
 from datetime import timedelta
 from django.utils import timezone
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 from django.utils.encoding import smart_str
 
@@ -118,6 +120,28 @@ def eliminar_codigo_qr(sender, instance, **kwargs):
         if os.path.isfile(instance.codigo_qr.path):
             os.remove(instance.codigo_qr.path)
 
+@receiver(post_save, sender=Usuario_gym)
+def actualizar_ganancia_diaria(sender, instance, created, **kwargs):
+    if created and instance.plan:
+        precio_plan = instance.plan.precio
+        fecha_actual = datetime.now().date()
+        registro_ganancia, _ = RegistroGanancia.objects.get_or_create(fecha=fecha_actual)
+        registro_ganancia.ganancia_diaria += precio_plan
+        registro_ganancia.save()
+
+
+@receiver(pre_delete, sender=Usuario_gym)
+def restar_ganancia_diaria(sender, instance, **kwargs):
+    if instance.plan:
+        precio_plan = instance.plan.precio
+        fecha_actual = datetime.now().date()
+        fecha_fin = instance.fecha_fin
+        if fecha_fin and fecha_actual <= fecha_fin - timedelta(days=instance.plan.dias / 2):
+            registro_ganancia, _ = RegistroGanancia.objects.get_or_create(fecha=fecha_actual)
+            registro_ganancia.ganancia_diaria -= precio_plan
+            registro_ganancia.save()
+
+
 class Asistencia(models.Model):
     usuario = models.ForeignKey(Usuario_gym, on_delete=models.CASCADE)
     fecha = models.DateField(default=timezone.now)
@@ -143,6 +167,24 @@ class Articulo(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+@receiver(post_save, sender=Articulo)
+def agregar_gasto_diario(sender, instance, created, **kwargs):
+    if created:
+        precio_articulo = Decimal(instance.precio)
+        fecha_actual = timezone.now().date()
+        registro_ganancia, _ = RegistroGanancia.objects.get_or_create(fecha=fecha_actual)
+        registro_ganancia.gasto_diario += precio_articulo
+        registro_ganancia.save()
+
+@receiver(pre_delete, sender=Articulo)
+def restar_gasto_diario(sender, instance, **kwargs):
+    precio_articulo = Decimal(instance.precio)
+    fecha_actual = timezone.now().date()
+    registro_ganancia, _ = RegistroGanancia.objects.get_or_create(fecha=fecha_actual)
+    registro_ganancia.gasto_diario -= precio_articulo
+    registro_ganancia.save()
 
 
 class RegistroGanancia(models.Model):
@@ -182,3 +224,5 @@ class DetalleVenta(models.Model):
     registro_ganancia = models.ForeignKey(RegistroGanancia, on_delete=models.CASCADE)
     articulo = models.ForeignKey(Articulo, on_delete=models.CASCADE)
     cantidad_vendida = models.IntegerField(default=0)
+    
+    
